@@ -1,0 +1,154 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --erp-bg: #f7faff;
+  --erp-surface: #ffffff;
+  --erp-surface-soft: #f4f8ff;
+  --erp-surface-strong: #edf4ff;
+  --erp-border: #d9e7ff;
+  --erp-text: #0f172a;
+  --erp-muted: #5b6b85;
+  --erp-primary: #2563eb;
+  --erp-primary-soft: #dbeafe;
+  --erp-secondary: #0f766e;
+  --erp-secondary-soft: #ccfbf1;
+  --erp-success: #16a34a;
+  --erp-danger: #dc2626;
+  --erp-shadow: 0 18px 40px rgba(37, 99, 235, 0.09);
+  --erp-shadow-soft: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.12), transparent 22rem),
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 18rem),
+    linear-gradient(180deg, #fbfdff 0%, #f3f8ff 48%, #edf4ff 100%);
+  color: var(--erp-text);
+  font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+pre,
+code {
+  font-family: "JetBrains Mono", monospace;
+}
+
+::selection {
+  background: rgba(37, 99, 235, 0.18);
+}
+
+.erp-card {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--erp-border);
+  box-shadow: var(--erp-shadow);
+  backdrop-filter: blur(14px);
+  transition: box-shadow 180ms ease, transform 180ms ease, border-color 180ms ease;
+}
+
+.erp-soft-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(244, 248, 255, 0.96));
+  border: 1px solid var(--erp-border);
+  box-shadow: var(--erp-shadow-soft);
+}
+
+.erp-grid-bg {
+  background-image:
+    linear-gradient(rgba(37, 99, 235, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37, 99, 235, 0.04) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.erp-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.erp-scrollbar::-webkit-scrollbar-track {
+  background: #eff6ff;
+  border-radius: 999px;
+}
+
+.erp-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #60a5fa, #2dd4bf);
+  border-radius: 999px;
+}
+
+.erp-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #60a5fa #eff6ff;
+}
+
+.erp-fade-in {
+  animation: erp-fade-in 0.45s ease;
+}
+
+.erp-rise-in {
+  animation: erp-rise-in 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.erp-pulse-border {
+  animation: erp-pulse-border 2.8s ease-in-out infinite;
+}
+
+@keyframes erp-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes erp-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes erp-pulse-border {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.08);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(45, 212, 191, 0.08);
+  }
+}
