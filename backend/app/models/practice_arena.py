@@ -36,7 +36,6 @@ class ProgrammingLanguage(enum.Enum):
     cpp = "cpp"
     sql = "sql"
 
-
 class Question(Base):
     __tablename__ = "questions"
 

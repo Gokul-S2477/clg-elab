@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import StudentLogin from "./pages/StudentLogin";
 import AdminLogin from "./pages/AdminLogin";
 import Dashboard from "./pages/Dashboard";
+import ResumeBuilder from "./pages/ResumeBuilder";
 import Playground from "./pages/Playground";
 import StudyHome from "./pages/StudyHome";
 import SqlStudyPage from "./pages/SqlStudyPage";
@@ -26,6 +27,14 @@ const App = () => (
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/resume-builder"
+          element={
+            <ProtectedRoute>
+              <ResumeBuilder />
             </ProtectedRoute>
           }
         />

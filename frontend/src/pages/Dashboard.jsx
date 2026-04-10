@@ -1,7 +1,9 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { getRoleLabel, getStoredUser, isPrivilegedRole } from "../utils/roleHelper";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const user = getStoredUser();
 
   const cards = [
@@ -32,6 +34,26 @@ const Dashboard = () => {
             <p className="mt-6 text-3xl font-extrabold text-slate-900">{card.value}</p>
           </article>
         ))}
+      </section>
+
+      <section className="erp-card rounded-[30px] p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.4em] text-blue-600">Resume Builder</p>
+            <h2 className="mt-3 text-3xl font-extrabold text-slate-900">Build placement-ready resumes from the dashboard.</h2>
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
+              Open the resume portal to preview templates, create or load a resume, and manage up to three saved
+              resumes with profile-based prefill.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/dashboard/resume-builder")}
+            className="rounded-full bg-[#0F5BD8] px-5 py-3 text-sm font-bold text-white"
+          >
+            Open Resume Builder
+          </button>
+        </div>
       </section>
     </div>
   );

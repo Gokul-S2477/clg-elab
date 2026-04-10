@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 import { getStoredUser, isPrivilegedRole } from "../utils/roleHelper";
 import { getProctorSettings, saveProctorSettings } from "../utils/proctorSettings";
 import { getPlaygroundSettings, savePlaygroundSettings } from "../utils/playgroundSettings";
+import { getResumeSettings, saveResumeSettings } from "../utils/resumeSettings";
 
 const settingCards = [
   {
@@ -46,6 +47,7 @@ const SystemSettings = () => {
   const [user] = useState(getStoredUser());
   const [settings, setSettings] = useState(() => getProctorSettings());
   const [playgroundSettings, setPlaygroundSettings] = useState(() => getPlaygroundSettings());
+  const [resumeSettings, setResumeSettings] = useState(() => getResumeSettings());
   const [saveMessage, setSaveMessage] = useState("");
 
   useEffect(() => {
@@ -77,6 +79,12 @@ const SystemSettings = () => {
     const next = savePlaygroundSettings({ ...playgroundSettings, [key]: nextValue });
     setPlaygroundSettings(next);
     setSaveMessage("Playground settings updated");
+  };
+
+  const handleResumeToggle = (key) => {
+    const next = saveResumeSettings({ ...resumeSettings, [key]: !resumeSettings[key] });
+    setResumeSettings(next);
+    setSaveMessage("Resume settings updated");
   };
 
   return (
@@ -232,6 +240,47 @@ const SystemSettings = () => {
           <p className="text-sm font-bold text-blue-900">Advanced Note</p>
           <p className="mt-2 text-sm leading-7 text-blue-800">
             These settings are applied immediately in Playground via browser storage and can be tuned without code changes.
+          </p>
+        </div>
+      </section>
+
+      <section className="erp-card rounded-[30px] p-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.4em] text-blue-600">Resume Settings</p>
+        <h2 className="mt-3 text-2xl font-extrabold text-slate-900">Resume Builder Controls</h2>
+        <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
+          Control whether students can edit their profile details before creating resumes. Faculty, admin, and super admin can always edit.
+        </p>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        <div className="erp-card rounded-[28px] p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-lg font-bold text-slate-900">Allow students to edit profile basics</p>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                When disabled, students can still use their stored profile data in Resume Builder, but only privileged roles can change it.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleResumeToggle("studentProfileEditEnabled")}
+              className={`rounded-full px-4 py-2 text-sm font-bold ${
+                resumeSettings.studentProfileEditEnabled
+                  ? "border border-blue-200 bg-blue-50 text-blue-700"
+                  : "border border-slate-200 bg-white text-slate-600"
+              }`}
+            >
+              {resumeSettings.studentProfileEditEnabled ? "Enabled" : "Disabled"}
+            </button>
+          </div>
+        </div>
+
+        <div className="erp-card rounded-[28px] border border-blue-100 bg-blue-50/70 p-5">
+          <p className="text-sm font-bold text-blue-900">Current behavior</p>
+          <p className="mt-2 text-sm leading-7 text-blue-800">
+            {resumeSettings.studentProfileEditEnabled
+              ? "Students can update their profile basics from the Resume Builder profile tab."
+              : "Students see profile basics in read-only mode. Faculty and admins still keep edit access."}
           </p>
         </div>
       </section>
