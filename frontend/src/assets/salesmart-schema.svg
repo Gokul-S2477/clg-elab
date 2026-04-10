@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="540" viewBox="0 0 980 540">
+  <defs>
+    <style>
+      .box { fill: #f8fbff; stroke: #1f8ed8; stroke-width: 2; rx: 10; }
+      .head { fill: #e7f4ff; stroke: #1f8ed8; stroke-width: 2; }
+      .title { font-family: Arial, sans-serif; font-size: 18px; font-weight: 700; fill: #0f3f66; }
+      .text { font-family: Arial, sans-serif; font-size: 14px; fill: #1e293b; }
+      .pk { fill: #0b7285; font-weight: 700; }
+      .fk { fill: #1d4ed8; font-weight: 700; }
+      .line { stroke: #1f8ed8; stroke-width: 2; fill: none; stroke-dasharray: 6 5; }
+    </style>
+  </defs>
+
+  <rect x="40" y="60" width="260" height="170" class="box"/>
+  <rect x="40" y="60" width="260" height="34" class="head"/>
+  <text x="56" y="83" class="title">customers</text>
+  <text x="56" y="116" class="text"><tspan class="pk">PK</tspan> customer_id</text>
+  <text x="56" y="142" class="text">full_name</text>
+  <text x="56" y="168" class="text">city</text>
+  <text x="56" y="194" class="text">signup_date</text>
+
+  <rect x="360" y="40" width="260" height="190" class="box"/>
+  <rect x="360" y="40" width="260" height="34" class="head"/>
+  <text x="376" y="63" class="title">orders</text>
+  <text x="376" y="96" class="text"><tspan class="pk">PK</tspan> order_id</text>
+  <text x="376" y="122" class="text"><tspan class="fk">FK</tspan> customer_id</text>
+  <text x="376" y="148" class="text">order_date</text>
+  <text x="376" y="174" class="text">channel</text>
+  <text x="376" y="200" class="text">total_amount</text>
+
+  <rect x="700" y="60" width="240" height="170" class="box"/>
+  <rect x="700" y="60" width="240" height="34" class="head"/>
+  <text x="716" y="83" class="title">products</text>
+  <text x="716" y="116" class="text"><tspan class="pk">PK</tspan> product_id</text>
+  <text x="716" y="142" class="text">product_name</text>
+  <text x="716" y="168" class="text">category</text>
+  <text x="716" y="194" class="text">unit_price</text>
+
+  <rect x="360" y="300" width="300" height="180" class="box"/>
+  <rect x="360" y="300" width="300" height="34" class="head"/>
+  <text x="376" y="323" class="title">order_items</text>
+  <text x="376" y="358" class="text"><tspan class="fk">FK</tspan> order_id</text>
+  <text x="376" y="384" class="text"><tspan class="fk">FK</tspan> product_id</text>
+  <text x="376" y="410" class="text">quantity</text>
+  <text x="376" y="436" class="text">unit_price</text>
+
+  <path d="M300 140 L360 122" class="line"/>
+  <path d="M620 140 L700 140" class="line"/>
+  <path d="M490 230 L490 300" class="line"/>
+  <path d="M700 200 L620 384" class="line"/>
+</svg>

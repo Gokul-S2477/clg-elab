@@ -1,37 +1,79 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import { API_BASE } from "../utils/api";
 import { getStoredUser } from "../utils/roleHelper";
+import OneCompilerEmbed from "../components/OneCompilerEmbed";
+import northwindSchemaImage from "../assets/northwind-schema.svg";
+import hrSchemaImage from "../assets/hr-schema.svg";
+import salesmartSchemaImage from "../assets/salesmart-schema.svg";
+import { getPlaygroundSettings } from "../utils/playgroundSettings";
 
-const MODULES = [
+const BASE_MODULES = [
   { id: "compiler", label: "Compiler Lab", live: true },
   { id: "app", label: "App Playground", live: true },
-  { id: "sql", label: "SQL Playground", live: false },
-  { id: "notebook", label: "Notebook Lab", live: false },
+  { id: "sql", label: "SQL Playground", live: true },
+  { id: "notebook", label: "Notebook Lab", live: true },
 ];
 
 const SAVE_LIMIT = 5;
 
-const COMPILER_TEMPLATES = {
-  python: [
-    { id: "py-hello", label: "Python Starter", code: `print("Hello from Python")`, note: "Quick check workspace." },
-    { id: "py-calculator", label: "Calculator", code: `num1 = float(input("Enter first number: "))\noperator = input("Choose operator (+, -, *, /): ").strip()\nnum2 = float(input("Enter second number: "))\n\nif operator == "+":\n    print("Result:", num1 + num2)\nelif operator == "-":\n    print("Result:", num1 - num2)\nelif operator == "*":\n    print("Result:", num1 * num2)\nelif operator == "/":\n    if num2 == 0:\n        print("Cannot divide by zero")\n    else:\n        print("Result:", num1 / num2)\nelse:\n    print("Invalid operator")`, note: "Simple CLI calculator for beginners." },
-    { id: "py-guessing", label: "Number Guessing", code: `secret = 7\nattempt = int(input("Guess the number (1-10): "))\n\nif attempt == secret:\n    print("Correct! You guessed it.")\nelif attempt < secret:\n    print("Too low.")\nelse:\n    print("Too high.")`, note: "Basic condition-checking practice." },
-    { id: "py-palindrome", label: "Palindrome Checker", code: `text = input("Enter a word: ").strip().lower()\ncleaned = "".join(ch for ch in text if ch.isalnum())\n\nif cleaned == cleaned[::-1]:\n    print("It is a palindrome")\nelse:\n    print("It is not a palindrome")`, note: "String practice with slicing." },
-    { id: "py-grade", label: "Grade Calculator", code: `marks = [78, 85, 92, 88, 76]\naverage = sum(marks) / len(marks)\n\nprint("Marks:", marks)\nprint("Average:", round(average, 2))\n\nif average >= 90:\n    print("Grade: A")\nelif average >= 75:\n    print("Grade: B")\nelif average >= 60:\n    print("Grade: C")\nelse:\n    print("Grade: D")`, note: "Lists and grading logic." },
-    { id: "py-todo-cli", label: "To-Do CLI", code: `tasks = []\n\nwhile True:\n    action = input("Add/List/Quit: ").strip().lower()\n    if action == "add":\n        tasks.append(input("Enter task: ").strip())\n    elif action == "list":\n        if not tasks:\n            print("No tasks yet.")\n        else:\n            for index, task in enumerate(tasks, start=1):\n                print(f"{index}. {task}")\n    elif action == "quit":\n        print("Goodbye!")\n        break\n    else:\n        print("Unknown action")`, note: "Tiny command-line app using loops and lists." },
-    { id: "py-converter", label: "Unit Converter", code: `value = float(input("Enter kilometers: "))\nmiles = value * 0.621371\nprint(f"{value} km = {miles:.2f} miles")`, note: "Very simple conversion app." },
-    { id: "py-quiz-cli", label: "Quiz CLI", code: `score = 0\n\nanswer = input("Which language is best known for data analysis? ").strip().lower()\nif answer == "python":\n    score += 1\n\nanswer = input("What is 5 * 6? ").strip()\nif answer == "30":\n    score += 1\n\nprint("Final score:", score, "/ 2")`, note: "Beginner quiz using input and conditions." },
-    { id: "py-pandas", label: "Pandas + Excel", code: `import pandas as pd\n\ndf = pd.read_excel("your_file.xlsx")\nprint(df.head())\nprint(df.shape)`, note: "Upload an Excel file and inspect it." },
-    { id: "py-numpy", label: "NumPy Stats", code: `import numpy as np\n\nvalues = np.array([12, 18, 21, 14, 30, 27])\nprint("Mean:", values.mean())\nprint("Median:", np.median(values))`, note: "Numerical analysis starter." },
-    { id: "py-seaborn", label: "Chart Workflow", code: `import pandas as pd\nimport matplotlib.pyplot as plt\nimport seaborn as sns\n\ndf = pd.DataFrame({"month":["Jan","Feb","Mar"],"sales":[120,150,170]})\nsns.barplot(data=df, x="month", y="sales")\nplt.tight_layout()\nplt.savefig("chart.png")\nprint("Saved chart.png")`, note: "Generate a chart image." },
-    { id: "py-ml", label: "Scikit-Learn", code: `from sklearn.linear_model import LinearRegression\nimport numpy as np\n\nX = np.array([[1],[2],[3],[4]])\ny = np.array([2,4,6,8])\nmodel = LinearRegression().fit(X,y)\nprint("Prediction for 5:", model.predict([[5]])[0])`, note: "Tiny ML starter." },
-  ],
-  javascript: [
-    { id: "js-hello", label: "JS Starter", code: `console.log("Hello from JavaScript");`, note: "Console practice." },
-  ],
-  java: [{ id: "java-hello", label: "Java Starter", code: `public class Main {\n  public static void main(String[] args) {\n    System.out.println("Hello from Java");\n  }\n}`, note: "Preview until runtime is enabled." }],
-  cpp: [{ id: "cpp-hello", label: "C++ Starter", code: `#include <iostream>\nusing namespace std;\nint main() {\n  cout << "Hello from C++" << endl;\n  return 0;\n}`, note: "Preview until runtime is enabled." }],
+const COMPILER_LANGUAGE_OPTIONS = [
+  { id: "python", label: "Python" },
+  { id: "javascript", label: "JavaScript" },
+  { id: "java", label: "Java" },
+  { id: "cpp", label: "C++" },
+  { id: "c", label: "C" },
+  { id: "csharp", label: "C#" },
+  { id: "go", label: "Go" },
+  { id: "rust", label: "Rust" },
+  { id: "typescript", label: "TypeScript" },
+  { id: "php", label: "PHP" },
+  { id: "ruby", label: "Ruby" },
+  { id: "swift", label: "Swift" },
+  { id: "kotlin", label: "Kotlin" },
+  { id: "r", label: "R" },
+  { id: "scala", label: "Scala" },
+  { id: "perl", label: "Perl" },
+  { id: "lua", label: "Lua" },
+  { id: "bash", label: "Bash" },
+  { id: "sql", label: "PostgreSQL" },
+];
+
+const COMPILER_LIBRARY_BADGES = {
+  python: ["pandas", "numpy", "openpyxl", "matplotlib", "seaborn", "plotly", "streamlit"],
+  javascript: ["node", "npm", "stdin", "stdout"],
+  java: ["stdin", "stdout", "class Main"],
+  cpp: ["g++", "stdin", "stdout"],
+  sql: ["query", "result", "postgresql"],
+};
+
+const COMPILER_FILE_EXTENSIONS = {
+  python: ".py",
+  javascript: ".js",
+  java: ".java",
+  cpp: ".cpp",
+  c: ".c",
+  csharp: ".cs",
+  go: ".go",
+  rust: ".rs",
+  typescript: ".ts",
+  php: ".php",
+  ruby: ".rb",
+  swift: ".swift",
+  kotlin: ".kt",
+  r: ".r",
+  scala: ".scala",
+  perl: ".pl",
+  lua: ".lua",
+  bash: ".sh",
+  sql: ".sql",
+};
+
+const getDefaultMainFileName = (languageId) => {
+  if (languageId === "java") return "Main.java";
+  if (languageId === "csharp") return "Program.cs";
+  if (languageId === "sql") return "script.sql";
+  return `main${COMPILER_FILE_EXTENSIONS[languageId] || ".txt"}`;
 };
 
 const APP_TEMPLATES = [
@@ -146,7 +188,7 @@ if st.button("Convert"):
         st.success(f"{value} km = {result:.2f} miles")
     elif conversion == "Celsius to Fahrenheit":
         result = (value * 9/5) + 32
-        st.success(f"{value}°C = {result:.2f}°F")
+        st.success(f"{value}Â°C = {result:.2f}Â°F")
     else:
         result = value * 2.20462
         st.success(f"{value} kg = {result:.2f} lbs")`,
@@ -227,11 +269,58 @@ st.area_chart(data.set_index("day"))`,
 ];
 
 const DEFAULT_CAPABILITIES = {
-  supported_languages: ["python", "javascript"],
   python_modules: ["pandas", "numpy", "openpyxl", "matplotlib", "streamlit"],
   uploads_supported: true,
   streamlit_supported: true,
 };
+
+const DEFAULT_SQL_QUERY = "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;";
+const DEFAULT_NOTEBOOK_CELLS = [
+  {
+    id: "cell-1",
+    type: "code",
+    code: "",
+    output: "",
+    status: "idle",
+    meta: "",
+  },
+];
+
+const getNotebookEditorHeight = (code = "") => {
+  const lines = Math.max(2, String(code || "").split("\n").length);
+  const pixels = 24 + lines * 22;
+  return `${Math.min(420, Math.max(68, pixels))}px`;
+};
+
+const SQL_SCHEMA_IMAGES = {
+  northwind: northwindSchemaImage,
+  hr: hrSchemaImage,
+  sales_mart: salesmartSchemaImage,
+};
+
+const SQL_PAGE_SIZE = 100;
+
+const createSqlTab = (index = 1, query = DEFAULT_SQL_QUERY) => ({
+  id: `sql-tab-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  name: `Query ${index}`,
+  query,
+});
+
+const splitSqlStatements = (source = "") => {
+  const text = String(source || "");
+  const bySemicolon = text
+    .split(";")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (bySemicolon.length > 1) return bySemicolon;
+  return text
+    .split(/\n(?=\s*(select|with|explain)\b)/i)
+    .map((part) => part.trim())
+    .filter(Boolean);
+};
+const INITIAL_SQL_TAB = createSqlTab(1, DEFAULT_SQL_QUERY);
+
+const buildSqlHistoryKey = (userId, datasetId) => `playground_sql_history_${userId}_${datasetId}`;
 
 const formatSavedAt = (value) => {
   if (!value) return "Saved just now";
@@ -240,32 +329,25 @@ const formatSavedAt = (value) => {
   return Number.isNaN(date.getTime()) ? "Saved just now" : date.toLocaleString();
 };
 
-const MAIN_FILE_BY_LANGUAGE = {
-  python: "main.py",
-  javascript: "main.js",
-  java: "Main.java",
-  cpp: "main.cpp",
-};
-
 const Playground = () => {
   const currentUser = getStoredUser();
   const currentUserId = currentUser?.id || 1;
-  const compilerSocketRef = useRef(null);
+  const [playgroundSettings, setPlaygroundSettings] = useState(() => getPlaygroundSettings());
   const [activeModule, setActiveModule] = useState("compiler");
   const [capabilities, setCapabilities] = useState(DEFAULT_CAPABILITIES);
   const [language, setLanguage] = useState("python");
-  const [compilerTemplateId, setCompilerTemplateId] = useState(COMPILER_TEMPLATES.python[0].id);
-  const [code, setCode] = useState(COMPILER_TEMPLATES.python[0].code);
-  const [stdin, setStdin] = useState("");
-  const [files, setFiles] = useState([]);
-  const [output, setOutput] = useState("(no output)");
-  const [terminalEntry, setTerminalEntry] = useState("");
-  const [status, setStatus] = useState("Ready");
-  const [runtime, setRuntime] = useState("");
-  const [isRunning, setIsRunning] = useState(false);
+  const [compilerFiles, setCompilerFiles] = useState([{ name: "main.py", content: "" }]);
+  const [activeCompilerFile, setActiveCompilerFile] = useState("main.py");
+  const [compilerSyncVersion, setCompilerSyncVersion] = useState(1);
+  const [status, setStatus] = useState("Synced");
+  const [localRunStatus, setLocalRunStatus] = useState("idle");
+  const [localRunOutput, setLocalRunOutput] = useState("(no local run yet)");
+  const [localRunMeta, setLocalRunMeta] = useState("");
+  const [localRunInput, setLocalRunInput] = useState("");
   const [compilerSaveName, setCompilerSaveName] = useState("");
   const [compilerSaves, setCompilerSaves] = useState([]);
-  const [activeEditorTab, setActiveEditorTab] = useState("editor");
+  const [compilerSaveSearch, setCompilerSaveSearch] = useState("");
+  const [oneCompilerStatus, setOneCompilerStatus] = useState({ configured: false, message: "Checking..." });
 
   const [appTemplateId, setAppTemplateId] = useState(APP_TEMPLATES[0].id);
   const [appCode, setAppCode] = useState(APP_TEMPLATES[0].code);
@@ -277,43 +359,81 @@ const Playground = () => {
   const [appSaveName, setAppSaveName] = useState("");
   const [appSaves, setAppSaves] = useState([]);
 
-  const stdinHint = useMemo(() => {
-    if (language === "python") {
-      return "If your code uses input(), type each answer on a new line. Example:\nYogir\n25";
-    }
-    if (language === "javascript") {
-      return "If your script reads stdin, type each value on a new line before clicking Run Code.";
-    }
-    return "Type program input here, one value per line, before running the code.";
-  }, [language]);
+  const [sqlDatasets, setSqlDatasets] = useState([]);
+  const [sqlDatasetId, setSqlDatasetId] = useState("hr");
+  const [sqlTabs, setSqlTabs] = useState(() => [INITIAL_SQL_TAB]);
+  const [activeSqlTabId, setActiveSqlTabId] = useState(() => INITIAL_SQL_TAB.id);
+  const [sqlOutput, setSqlOutput] = useState("(no output yet)");
+  const [sqlResultColumns, setSqlResultColumns] = useState([]);
+  const [sqlResultRows, setSqlResultRows] = useState([]);
+  const [sqlBatchResults, setSqlBatchResults] = useState([]);
+  const [sqlMeta, setSqlMeta] = useState("");
+  const [sqlRunning, setSqlRunning] = useState(false);
+  const [sqlRowOffset, setSqlRowOffset] = useState(0);
+  const [sqlRowLimit, setSqlRowLimit] = useState(() => getPlaygroundSettings().sqlPageSize || SQL_PAGE_SIZE);
+  const [sqlTotalRows, setSqlTotalRows] = useState(0);
+  const [sqlJumpPage, setSqlJumpPage] = useState("");
+  const [sqlSaveName, setSqlSaveName] = useState("");
+  const [sqlSaves, setSqlSaves] = useState([]);
+  const [sqlSaveSearch, setSqlSaveSearch] = useState("");
+  const [sqlHistory, setSqlHistory] = useState([]);
+  const [northwindStatus, setNorthwindStatus] = useState(null);
+  const sqlEditorRef = useRef(null);
 
-  useEffect(() => () => {
-    if (compilerSocketRef.current) {
-      compilerSocketRef.current.close();
-      compilerSocketRef.current = null;
-    }
-  }, []);
+  const [notebookLanguage, setNotebookLanguage] = useState("python");
+  const [notebookCells, setNotebookCells] = useState(DEFAULT_NOTEBOOK_CELLS);
+  const [notebookSaveName, setNotebookSaveName] = useState("");
+  const [notebookSaves, setNotebookSaves] = useState([]);
+  const [notebookSaveSearch, setNotebookSaveSearch] = useState("");
 
   useEffect(() => {
     fetch(`${API_BASE}/playground/capabilities`).then((r) => (r.ok ? r.json() : null)).then((data) => data && setCapabilities(data)).catch(() => {});
+    fetch(`${API_BASE}/playground/sql/datasets`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        const datasets = data?.datasets || [];
+        setSqlDatasets(datasets);
+        if (datasets.length > 0 && !datasets.some((item) => item.id === sqlDatasetId)) {
+          setSqlDatasetId(datasets[0].id);
+        }
+      })
+      .catch(() => setSqlDatasets([]));
+    fetch(`${API_BASE}/playground/onecompiler/status`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => data && setOneCompilerStatus(data))
+      .catch(() => setOneCompilerStatus({ configured: false, message: "Status unavailable." }));
+  }, []);
+
+  useEffect(() => {
+    const syncSettings = () => setPlaygroundSettings(getPlaygroundSettings());
+    window.addEventListener("playground-settings-updated", syncSettings);
+    return () => window.removeEventListener("playground-settings-updated", syncSettings);
   }, []);
 
   useEffect(() => {
     const loadBackendSaves = async () => {
       try {
-        const [compilerResponse, appResponse] = await Promise.all([
+        const [compilerResponse, appResponse, sqlResponse, notebookResponse] = await Promise.all([
           fetch(`${API_BASE}/playground/saves?user_id=${currentUserId}&module=compiler`),
           fetch(`${API_BASE}/playground/saves?user_id=${currentUserId}&module=app`),
+          fetch(`${API_BASE}/playground/saves?user_id=${currentUserId}&module=sql`),
+          fetch(`${API_BASE}/playground/saves?user_id=${currentUserId}&module=notebook`),
         ]);
-        const [compilerPayload, appPayload] = await Promise.all([
+        const [compilerPayload, appPayload, sqlPayload, notebookPayload] = await Promise.all([
           compilerResponse.ok ? compilerResponse.json() : [],
           appResponse.ok ? appResponse.json() : [],
+          sqlResponse.ok ? sqlResponse.json() : [],
+          notebookResponse.ok ? notebookResponse.json() : [],
         ]);
         setCompilerSaves(Array.isArray(compilerPayload) ? compilerPayload : []);
         setAppSaves(Array.isArray(appPayload) ? appPayload : []);
+        setSqlSaves(Array.isArray(sqlPayload) ? sqlPayload : []);
+        setNotebookSaves(Array.isArray(notebookPayload) ? notebookPayload : []);
       } catch {
         setCompilerSaves([]);
         setAppSaves([]);
+        setSqlSaves([]);
+        setNotebookSaves([]);
       }
     };
     loadBackendSaves();
@@ -336,149 +456,142 @@ const Playground = () => {
     return () => window.clearInterval(timer);
   }, [activeModule]);
 
-  const runnableLanguages = capabilities.supported_languages || ["python", "javascript"];
-  const currentCompilerTemplates = useMemo(() => COMPILER_TEMPLATES[language] || [], [language]);
-  const currentCompilerTemplate = currentCompilerTemplates.find((item) => item.id === compilerTemplateId) || currentCompilerTemplates[0];
+  useEffect(() => {
+    if (activeModule !== "sql" || sqlDatasetId !== "northwind") return;
+    fetch(`${API_BASE}/playground/sql/northwind/status`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setNorthwindStatus(data))
+      .catch(() => setNorthwindStatus(null));
+  }, [activeModule, sqlDatasetId]);
+
+  useEffect(() => {
+    const key = buildSqlHistoryKey(currentUserId, sqlDatasetId);
+    try {
+      const raw = window.localStorage.getItem(key);
+      const parsed = raw ? JSON.parse(raw) : [];
+      setSqlHistory(Array.isArray(parsed) ? parsed : []);
+    } catch {
+      setSqlHistory([]);
+    }
+    setSqlRowOffset(0);
+    setSqlResultColumns([]);
+    setSqlResultRows([]);
+    setSqlTotalRows(0);
+    setSqlMeta("");
+    setSqlJumpPage("");
+  }, [currentUserId, sqlDatasetId]);
+
+  useEffect(() => {
+    const configured = Number(playgroundSettings.sqlPageSize || SQL_PAGE_SIZE);
+    const capped = Math.min(Number(capabilities?.sql_max_row_limit || 500), Math.max(50, configured));
+    setSqlRowLimit(capped);
+  }, [capabilities?.sql_max_row_limit, playgroundSettings.sqlPageSize]);
+
+  const previousNotebookLanguageRef = useRef(notebookLanguage);
+  useEffect(() => {
+    const previous = previousNotebookLanguageRef.current;
+    if (previous !== notebookLanguage && !playgroundSettings.keepNotebookOutputsOnLanguageSwitch) {
+      setNotebookCells((prev) => prev.map((cell) => ({ ...cell, output: "", meta: "", status: "idle" })));
+    }
+    previousNotebookLanguageRef.current = notebookLanguage;
+  }, [notebookLanguage, playgroundSettings.keepNotebookOutputsOnLanguageSwitch]);
+
   const currentAppTemplate = APP_TEMPLATES.find((item) => item.id === appTemplateId) || APP_TEMPLATES[0];
-  const compilerMainFile = MAIN_FILE_BY_LANGUAGE[language] || "main.txt";
-  const explorerItems = useMemo(
-    () => [
-      { id: "editor", name: compilerMainFile, kind: "file", hint: "Editable source file" },
-      ...files.map((file) => ({ id: `upload:${file.name}`, name: file.name, kind: "upload", hint: `${Math.max(1, Math.round(file.size / 1024))} KB upload` })),
-      ...compilerSaves.slice(0, 3).map((item) => ({ id: `save:${item.id}`, name: item.name, kind: "save", hint: "Saved workspace snapshot" })),
-    ],
-    [compilerMainFile, files, compilerSaves]
+  const compilerBadges = COMPILER_LIBRARY_BADGES[language] || ["stdin", "stdout"];
+  const activeCompilerContent = useMemo(() => {
+    const activeFile = compilerFiles.find((item) => item.name === activeCompilerFile);
+    return activeFile?.content || "";
+  }, [activeCompilerFile, compilerFiles]);
+  const filteredCompilerSaves = useMemo(() => {
+    const query = compilerSaveSearch.trim().toLowerCase();
+    if (!query) {
+      return compilerSaves;
+    }
+    return compilerSaves.filter((item) => {
+      const haystack = `${item.name || ""} ${item.language || ""}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [compilerSaveSearch, compilerSaves]);
+
+  const filteredSqlSaves = useMemo(() => {
+    const query = sqlSaveSearch.trim().toLowerCase();
+    if (!query) return sqlSaves;
+    return sqlSaves.filter((item) => `${item.name || ""} ${item.language || ""}`.toLowerCase().includes(query));
+  }, [sqlSaveSearch, sqlSaves]);
+
+  const filteredNotebookSaves = useMemo(() => {
+    const query = notebookSaveSearch.trim().toLowerCase();
+    if (!query) return notebookSaves;
+    return notebookSaves.filter((item) => `${item.name || ""} ${item.language || ""}`.toLowerCase().includes(query));
+  }, [notebookSaveSearch, notebookSaves]);
+
+  const modules = useMemo(
+    () =>
+      BASE_MODULES.filter((module) => {
+        if (module.id === "compiler") return playgroundSettings.compilerEnabled;
+        if (module.id === "app") return playgroundSettings.appEnabled;
+        if (module.id === "sql") return playgroundSettings.sqlEnabled;
+        if (module.id === "notebook") return playgroundSettings.notebookEnabled;
+        return true;
+      }),
+    [playgroundSettings]
   );
 
-  const selectCompilerTemplate = (nextLanguage, templateId) => {
-    const template = (COMPILER_TEMPLATES[nextLanguage] || []).find((item) => item.id === templateId) || (COMPILER_TEMPLATES[nextLanguage] || [])[0];
+  const effectiveSaveLimit = Math.max(1, Number(capabilities?.save_limit || SAVE_LIMIT));
+
+  const activeSqlDataset = useMemo(
+    () => sqlDatasets.find((item) => item.id === sqlDatasetId) || sqlDatasets[0] || null,
+    [sqlDatasetId, sqlDatasets]
+  );
+  const activeSqlTab = useMemo(
+    () => sqlTabs.find((tab) => tab.id === activeSqlTabId) || sqlTabs[0] || null,
+    [activeSqlTabId, sqlTabs]
+  );
+  const sqlQuery = activeSqlTab?.query || "";
+  const activeSqlDatasetRowCount = useMemo(
+    () => (activeSqlDataset?.tables || []).reduce((sum, table) => sum + Number(table?.row_count || 0), 0),
+    [activeSqlDataset]
+  );
+  const sqlPageLabel = useMemo(() => {
+    if (!sqlTotalRows) return "No rows";
+    const start = sqlRowOffset + 1;
+    const end = Math.min(sqlRowOffset + sqlResultRows.length, sqlTotalRows);
+    return `${start}-${end} of ${sqlTotalRows}`;
+  }, [sqlResultRows.length, sqlRowOffset, sqlTotalRows]);
+  const sqlTotalPages = useMemo(
+    () => (sqlTotalRows > 0 ? Math.max(1, Math.ceil(sqlTotalRows / sqlRowLimit)) : 0),
+    [sqlRowLimit, sqlTotalRows]
+  );
+  const sqlCurrentPage = useMemo(
+    () => (sqlTotalRows > 0 ? Math.floor(sqlRowOffset / sqlRowLimit) + 1 : 0),
+    [sqlRowLimit, sqlRowOffset, sqlTotalRows]
+  );
+
+  useEffect(() => {
+    if (modules.some((module) => module.id === activeModule)) return;
+    if (modules.length > 0) {
+      setActiveModule(modules[0].id);
+    }
+  }, [activeModule, modules]);
+
+  const changeCompilerLanguage = (nextLanguage) => {
+    const mainFileName = getDefaultMainFileName(nextLanguage);
     setLanguage(nextLanguage);
-    setCompilerTemplateId(template?.id || "");
-    setCode(template?.code || "");
-    setActiveEditorTab("editor");
-    setOutput("(no output)");
-    setStatus("Ready");
-    setRuntime("");
+    setCompilerFiles([{ name: mainFileName, content: "" }]);
+    setActiveCompilerFile(mainFileName);
+    setCompilerSyncVersion((prev) => prev + 1);
+    setStatus("Language changed");
   };
 
-  const closeCompilerSocket = () => {
-    if (compilerSocketRef.current) {
-      compilerSocketRef.current.close();
-      compilerSocketRef.current = null;
-    }
-  };
-
-  const runCompiler = async () => {
-    closeCompilerSocket();
-    setIsRunning(true);
-    setStatus("Running");
-    try {
-      if (language === "python") {
-        setOutput("");
-        setTerminalEntry("");
-        const startTime = window.performance.now();
-        const wsUrl = `${API_BASE.replace(/^http/, "ws")}/playground/python-terminal`;
-        const socket = new window.WebSocket(wsUrl);
-        compilerSocketRef.current = socket;
-
-        socket.onopen = () => {
-          socket.send(JSON.stringify({ type: "start", code }));
-        };
-
-        socket.onmessage = (event) => {
-          try {
-            const payload = JSON.parse(event.data);
-            if (payload.type === "status") {
-              setStatus("Running");
-              return;
-            }
-            if (payload.type === "output") {
-              setOutput((prev) => `${prev}${payload.data}`);
-              return;
-            }
-            if (payload.type === "error") {
-              setOutput((prev) => `${prev}${payload.message}\n`);
-              setStatus("Run failed");
-              setRuntime(`${(window.performance.now() - startTime).toFixed(1)} ms`);
-              setIsRunning(false);
-              return;
-            }
-            if (payload.type === "exit") {
-              setStatus(payload.returncode === 0 ? "Run completed" : "Run failed");
-              setRuntime(`${(window.performance.now() - startTime).toFixed(1)} ms`);
-              setIsRunning(false);
-              compilerSocketRef.current = null;
-            }
-          } catch {
-            setOutput((prev) => `${prev}${event.data}`);
-          }
-        };
-
-        socket.onerror = () => {
-          setOutput("Unable to start the live terminal session right now.");
-          setStatus("Run failed");
-          setRuntime("");
-          setIsRunning(false);
-          compilerSocketRef.current = null;
-        };
-
-        socket.onclose = () => {
-          compilerSocketRef.current = null;
-        };
-        return;
-      }
-
-      const effectiveStdin = stdin.trim();
-      const useFiles = capabilities.uploads_supported && files.length > 0;
-      const response = useFiles
-        ? await fetch(`${API_BASE}/playground/run-with-files`, {
-            method: "POST",
-            body: (() => {
-              const data = new FormData();
-              data.append("language", language);
-              data.append("code", code);
-              data.append("stdin", effectiveStdin);
-              files.forEach((file) => data.append("files", file));
-              return data;
-            })(),
-          })
-        : await fetch(`${API_BASE}/playground/run`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ language, code, stdin: effectiveStdin }),
-          });
-      const payload = await response.json();
-      setOutput([payload.output, payload.errors].filter(Boolean).join("\n").trim() || "(no output)");
-      setStatus(payload.status === "success" ? "Run completed" : "Run failed");
-      setRuntime(payload.execution_time_ms ? `${payload.execution_time_ms.toFixed(1)} ms` : "");
-    } catch {
-      setOutput("Backend playground runner is unavailable right now.");
-      setStatus("Run failed");
-      setRuntime("");
-    } finally {
-      setIsRunning(false);
-    }
-  };
-
-  const sendTerminalInput = () => {
-    const socket = compilerSocketRef.current;
-    const value = terminalEntry;
-    if (!socket || socket.readyState !== window.WebSocket.OPEN || !value.trim()) {
+  const setActiveCompilerTab = (fileName) => {
+    const current = compilerFiles.find((item) => item.name === fileName);
+    if (!current) {
       return;
     }
-    socket.send(JSON.stringify({ type: "input", data: value }));
-    setOutput((prev) => `${prev}${value}\n`);
-    setTerminalEntry("");
-  };
-
-  const stopCompiler = () => {
-    if (compilerSocketRef.current && compilerSocketRef.current.readyState === window.WebSocket.OPEN) {
-      compilerSocketRef.current.send(JSON.stringify({ type: "terminate" }));
-      compilerSocketRef.current.close();
-    }
-    compilerSocketRef.current = null;
-    setIsRunning(false);
-    setStatus("Stopped");
+    const reordered = [current, ...compilerFiles.filter((item) => item.name !== fileName)];
+    setCompilerFiles(reordered);
+    setActiveCompilerFile(fileName);
+    setStatus("Tab active");
   };
 
   const launchApp = async () => {
@@ -512,12 +625,407 @@ const Playground = () => {
     }
   };
 
+  const addCompilerFile = () => {
+    const extension = COMPILER_FILE_EXTENSIONS[language] || ".txt";
+    let index = compilerFiles.length + 1;
+    let candidate = `file${index}${extension}`;
+    while (compilerFiles.some((item) => item.name === candidate)) {
+      index += 1;
+      candidate = `file${index}${extension}`;
+    }
+    const nextFiles = [...compilerFiles, { name: candidate, content: "" }];
+    setCompilerFiles(nextFiles);
+    setActiveCompilerFile(candidate);
+    setCompilerSyncVersion((prev) => prev + 1);
+    setStatus("File added");
+  };
+
+  const removeCompilerFile = (fileName) => {
+    if (compilerFiles.length <= 1) {
+      return;
+    }
+    const nextFiles = compilerFiles.filter((item) => item.name !== fileName);
+    setCompilerFiles(nextFiles);
+    if (activeCompilerFile === fileName) {
+      setActiveCompilerFile(nextFiles[0].name);
+    }
+    setCompilerSyncVersion((prev) => prev + 1);
+    setStatus("File removed");
+  };
+
+  const runCompilerLocal = async () => {
+    setLocalRunStatus("running");
+    setLocalRunMeta("");
+    try {
+      const response = await fetch(`${API_BASE}/playground/runtime/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          language,
+          stdin: localRunInput,
+          files: compilerFiles,
+        }),
+      });
+      const payload = await response.json();
+      const merged = [payload.output, payload.errors].filter(Boolean).join("\n").trim();
+      setLocalRunOutput(merged || "(no output)");
+      setLocalRunMeta(
+        payload.execution_time_ms
+          ? `${Number(payload.execution_time_ms).toFixed(1)} ms`
+          : ""
+      );
+      setLocalRunStatus(payload.status === "success" ? "done" : "failed");
+    } catch {
+      setLocalRunOutput("Local runtime is unavailable right now.");
+      setLocalRunMeta("");
+      setLocalRunStatus("failed");
+    }
+  };
+
+  const setSqlQueryForActiveTab = (nextQuery) => {
+    setSqlTabs((prev) =>
+      prev.map((tab) => (tab.id === activeSqlTabId ? { ...tab, query: nextQuery } : tab))
+    );
+  };
+
+  const addSqlTab = () => {
+    setSqlTabs((prev) => {
+      if (prev.length >= 10) return prev;
+      const nextTab = createSqlTab(prev.length + 1, "");
+      setActiveSqlTabId(nextTab.id);
+      return [...prev, nextTab];
+    });
+  };
+
+  const closeSqlTab = (tabId) => {
+    setSqlTabs((prev) => {
+      if (prev.length <= 1) return prev;
+      const nextTabs = prev.filter((tab) => tab.id !== tabId);
+      if (!nextTabs.some((tab) => tab.id === activeSqlTabId)) {
+        setActiveSqlTabId(nextTabs[nextTabs.length - 1].id);
+      }
+      return nextTabs;
+    });
+  };
+
+  const renameSqlTab = (tabId, nextName) => {
+    const cleaned = (nextName || "").trim();
+    if (!cleaned) return;
+    setSqlTabs((prev) => prev.map((tab) => (tab.id === tabId ? { ...tab, name: cleaned.slice(0, 24) } : tab)));
+  };
+
+  const resolveSqlRunPayload = () => {
+    const editor = sqlEditorRef.current;
+    if (!editor) {
+      return { query: sqlQuery.trim(), source: "tab" };
+    }
+    const model = editor.getModel();
+    const selection = editor.getSelection();
+    const selected = selection && model ? model.getValueInRange(selection).trim() : "";
+    if (selected) {
+      return { query: selected, source: "selected" };
+    }
+
+    if (model) {
+      const content = model.getValue();
+      const statements = splitSqlStatements(content);
+      if (statements.length > 1) {
+        if (content.includes(";")) {
+          const position = editor.getPosition();
+          const cursorOffset = position ? model.getOffsetAt(position) : 0;
+          let start = content.lastIndexOf(";", Math.max(0, cursorOffset - 1));
+          let end = content.indexOf(";", cursorOffset);
+          if (start === -1) start = 0;
+          else start += 1;
+          if (end === -1) end = content.length;
+          const statement = content.slice(start, end).trim();
+          if (statement) {
+            return { query: statement, source: "current" };
+          }
+        }
+        return { query: statements[statements.length - 1], source: "current" };
+      }
+    }
+    return { query: sqlQuery.trim(), source: "tab" };
+  };
+
+  const executeSqlStatement = async (queryText, offset = 0) => {
+    const response = await fetch(`${API_BASE}/playground/sql/run`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        dataset_id: sqlDatasetId,
+        query: queryText,
+        row_limit: sqlRowLimit,
+        row_offset: offset,
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok || payload.status === "error") {
+      throw new Error(payload.errors || payload.detail || "SQL execution failed.");
+    }
+    return payload;
+  };
+
+  const executeSqlBatch = async (queryText) => {
+    const statements = splitSqlStatements(queryText);
+    if (statements.length === 0) {
+      throw new Error("Please write a SQL query first.");
+    }
+
+    const results = [];
+    let totalTime = 0;
+    for (let index = 0; index < statements.length; index += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      const payload = await executeSqlStatement(statements[index], 0);
+      totalTime += Number(payload.execution_time_ms || 0);
+      results.push({
+        id: `${Date.now()}-${index}`,
+        query: statements[index],
+        columns: Array.isArray(payload.columns) ? payload.columns : [],
+        rows: Array.isArray(payload.rows) ? payload.rows : [],
+        rowCount: Number(payload.row_count || 0),
+        executionTimeMs: Number(payload.execution_time_ms || 0),
+        output: payload.output || "(no output)",
+      });
+    }
+    return { results, totalTime };
+  };
+
+  const runSqlQuery = async (offset = 0) => {
+    setSqlRunning(true);
+    setSqlMeta("");
+    try {
+      const { query: queryToRun, source } = resolveSqlRunPayload();
+      let historyRowCount = 0;
+      let historyExecutionMs = 0;
+      if (!queryToRun) {
+        setSqlOutput("Please write a SQL query first.");
+        setSqlResultColumns([]);
+        setSqlResultRows([]);
+        setSqlBatchResults([]);
+        setSqlTotalRows(0);
+        setSqlRowOffset(0);
+        setSqlMeta("");
+        return;
+      }
+      const statements = splitSqlStatements(queryToRun);
+      if (statements.length > 1) {
+        const { results, totalTime } = await executeSqlBatch(queryToRun);
+        setSqlBatchResults(results);
+        setSqlResultColumns([]);
+        setSqlResultRows([]);
+        setSqlRowOffset(0);
+        setSqlTotalRows(0);
+        setSqlOutput("Batch query run completed.");
+        setSqlMeta(`${totalTime.toFixed(1)} ms | ${results.length} result sets`);
+        historyRowCount = results.reduce((sum, item) => sum + Number(item.rowCount || 0), 0);
+        historyExecutionMs = totalTime;
+      } else {
+        const payload = await executeSqlStatement(queryToRun, offset);
+        setSqlBatchResults([]);
+        setSqlOutput(payload.output || "(no output)");
+        setSqlResultColumns(Array.isArray(payload.columns) ? payload.columns : []);
+        setSqlResultRows(Array.isArray(payload.rows) ? payload.rows : []);
+        setSqlRowOffset(Number(payload.row_offset || 0));
+        setSqlTotalRows(Number(payload.row_count || 0));
+        const rowInfo = payload.truncated ? `${payload.row_count}+ rows` : `${payload.row_count} rows`;
+        const sourceLabel = source === "selected" ? "Selected query" : source === "current" ? "Current query" : "Tab query";
+        setSqlMeta(`${Number(payload.execution_time_ms || 0).toFixed(1)} ms | ${rowInfo} | ${sourceLabel}`);
+        historyRowCount = Number(payload.row_count || 0);
+        historyExecutionMs = Number(payload.execution_time_ms || 0);
+      }
+
+      if (playgroundSettings.enableSqlHistory) {
+        const historyKey = buildSqlHistoryKey(currentUserId, sqlDatasetId);
+        const entry = {
+          id: `${Date.now()}`,
+          query: queryToRun,
+          row_count: historyRowCount,
+          execution_time_ms: historyExecutionMs,
+          created_at: Date.now(),
+        };
+        setSqlHistory((prev) => {
+          const nextHistory = [entry, ...prev.filter((item) => item.query !== queryToRun)].slice(0, 10);
+          window.localStorage.setItem(historyKey, JSON.stringify(nextHistory));
+          return nextHistory;
+        });
+      }
+    } catch (error) {
+      setSqlOutput(error.message || "SQL playground is unavailable right now.");
+      setSqlResultColumns([]);
+      setSqlResultRows([]);
+      setSqlBatchResults([]);
+      setSqlTotalRows(0);
+      setSqlRowOffset(0);
+      setSqlMeta("");
+    } finally {
+      setSqlRunning(false);
+    }
+  };
+
+  const runAllSqlQueries = async () => {
+    setSqlRunning(true);
+    setSqlMeta("");
+    try {
+      const { results, totalTime } = await executeSqlBatch(sqlQuery);
+      setSqlBatchResults(results);
+      setSqlResultColumns([]);
+      setSqlResultRows([]);
+      setSqlRowOffset(0);
+      setSqlTotalRows(0);
+      setSqlOutput("Batch query run completed.");
+      setSqlMeta(`${totalTime.toFixed(1)} ms total | ${results.length} result sets`);
+    } catch (error) {
+      setSqlOutput(error.message || "Unable to run all queries.");
+      setSqlResultColumns([]);
+      setSqlResultRows([]);
+      setSqlBatchResults([]);
+      setSqlTotalRows(0);
+      setSqlRowOffset(0);
+      setSqlMeta("");
+    } finally {
+      setSqlRunning(false);
+    }
+  };
+
+  const previousSqlDatasetRef = useRef(sqlDatasetId);
+  useEffect(() => {
+    if (previousSqlDatasetRef.current !== sqlDatasetId) {
+      if (playgroundSettings.autoRunLastSqlOnDatasetChange && sqlQuery.trim()) {
+        runSqlQuery(0);
+      }
+      previousSqlDatasetRef.current = sqlDatasetId;
+    }
+  }, [playgroundSettings.autoRunLastSqlOnDatasetChange, sqlDatasetId]);
+
+  const exportSqlResultsCsv = () => {
+    if (sqlResultColumns.length === 0 || sqlResultRows.length === 0) {
+      return;
+    }
+    const escapeCsv = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+    const lines = [
+      sqlResultColumns.map((column) => escapeCsv(column)).join(","),
+      ...sqlResultRows.map((row) => sqlResultColumns.map((column) => escapeCsv(row?.[column])).join(",")),
+    ];
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${sqlDatasetId}_query_results.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const runAllNotebookCells = async () => {
+    for (let index = 0; index < notebookCells.length; index += 1) {
+      if (notebookCells[index]?.type === "text") {
+        // eslint-disable-next-line no-continue
+        continue;
+      }
+      // eslint-disable-next-line no-await-in-loop
+      await runNotebookCell(index);
+    }
+  };
+
+  const goToSqlPage = (pageNumber) => {
+    if (!sqlTotalPages) return;
+    const safePage = Math.min(Math.max(1, pageNumber), sqlTotalPages);
+    const offset = (safePage - 1) * sqlRowLimit;
+    runSqlQuery(offset);
+  };
+
+  const clearSqlHistory = () => {
+    const key = buildSqlHistoryKey(currentUserId, sqlDatasetId);
+    setSqlHistory([]);
+    window.localStorage.removeItem(key);
+  };
+
+  const addNotebookCell = (type = "code", afterCellId = null) => {
+    if (notebookCells.length >= Number(playgroundSettings.maxNotebookCells || 20)) {
+      window.alert(`Maximum ${playgroundSettings.maxNotebookCells} notebook cells allowed.`);
+      return;
+    }
+    setNotebookCells((prev) => {
+      const nextCell = { id: `cell-${Date.now()}`, type, code: "", output: "", status: "idle", meta: "" };
+      if (!afterCellId) return [...prev, nextCell];
+      const index = prev.findIndex((cell) => cell.id === afterCellId);
+      if (index === -1) return [...prev, nextCell];
+      return [...prev.slice(0, index + 1), nextCell, ...prev.slice(index + 1)];
+    });
+  };
+
+  const removeNotebookCell = (cellId) => {
+    setNotebookCells((prev) => {
+      if (prev.length <= 1) return prev;
+      return prev.filter((cell) => cell.id !== cellId);
+    });
+  };
+
+  const updateNotebookCell = (cellId, nextCode) => {
+    setNotebookCells((prev) =>
+      prev.map((cell) => (cell.id === cellId ? { ...cell, code: nextCode || "", status: "idle" } : cell))
+    );
+  };
+
+  const runNotebookCell = async (index) => {
+    if (notebookCells[index]?.type === "text") return;
+    setNotebookCells((prev) =>
+      prev.map((cell, cellIndex) =>
+        cellIndex === index ? { ...cell, status: "running", meta: "Running..." } : cell
+      )
+    );
+    try {
+      const response = await fetch(`${API_BASE}/playground/notebook/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          language: notebookLanguage,
+          cells: notebookCells.map((cell) => cell.code),
+          run_index: index,
+        }),
+      });
+      const payload = await response.json();
+      const output = [payload.output, payload.errors].filter(Boolean).join("\n").trim() || "(no output)";
+      setNotebookCells((prev) =>
+        prev.map((cell, cellIndex) =>
+          cellIndex === index
+            ? {
+                ...cell,
+                output,
+                status: payload.status === "success" ? "done" : "error",
+                meta: payload.execution_time_ms ? `${Number(payload.execution_time_ms).toFixed(1)} ms` : "",
+              }
+            : cell
+        )
+      );
+    } catch {
+      setNotebookCells((prev) =>
+        prev.map((cell, cellIndex) =>
+          cellIndex === index ? { ...cell, output: "Notebook run failed.", status: "error", meta: "" } : cell
+        )
+      );
+    }
+  };
+
   const handleSave = async (kind) => {
-    const name = (kind === "compiler" ? compilerSaveName : appSaveName).trim();
-    const saves = kind === "compiler" ? compilerSaves : appSaves;
+    const nameByKind = {
+      compiler: compilerSaveName,
+      app: appSaveName,
+      sql: sqlSaveName,
+      notebook: notebookSaveName,
+    };
+    const savesByKind = {
+      compiler: compilerSaves,
+      app: appSaves,
+      sql: sqlSaves,
+      notebook: notebookSaves,
+    };
+    const name = (nameByKind[kind] || "").trim();
+    const saves = savesByKind[kind] || [];
     if (!name) return;
-    if (saves.length >= SAVE_LIMIT) {
-      window.alert(`Only ${SAVE_LIMIT} saved files are allowed. Delete one and try again.`);
+    if (saves.length >= effectiveSaveLimit) {
+      window.alert(`Only ${effectiveSaveLimit} saved files are allowed. Delete one and try again.`);
       return;
     }
     try {
@@ -528,8 +1036,31 @@ const Playground = () => {
           user_id: currentUserId,
           module: kind,
           name,
-          language: kind === "compiler" ? language : "python",
-          code: kind === "compiler" ? code : appCode,
+          language:
+            kind === "compiler"
+              ? language
+              : kind === "sql"
+                ? "sql"
+                : notebookLanguage,
+          code:
+            kind === "compiler"
+              ? activeCompilerContent
+              : kind === "app"
+                ? appCode
+                : kind === "sql"
+                  ? sqlQuery
+                  : (notebookCells.map((cell) => cell.code).join("\n\n# ---\n") || ""),
+          extra:
+            kind === "compiler"
+              ? {
+                  files: compilerFiles,
+                  active_file: activeCompilerFile,
+                }
+              : kind === "sql"
+                ? { dataset_id: sqlDatasetId, output: sqlOutput }
+                : kind === "notebook"
+                  ? { cells: notebookCells, language: notebookLanguage }
+                  : {},
         }),
       });
       const payload = await response.json();
@@ -539,9 +1070,16 @@ const Playground = () => {
       if (kind === "compiler") {
         setCompilerSaves((prev) => [payload, ...prev]);
         setCompilerSaveName("");
-      } else {
+        setStatus("Saved");
+      } else if (kind === "app") {
         setAppSaves((prev) => [payload, ...prev]);
         setAppSaveName("");
+      } else if (kind === "sql") {
+        setSqlSaves((prev) => [payload, ...prev]);
+        setSqlSaveName("");
+      } else if (kind === "notebook") {
+        setNotebookSaves((prev) => [payload, ...prev]);
+        setNotebookSaveName("");
       }
     } catch (error) {
       window.alert(error.message || "Unable to save this file right now.");
@@ -550,12 +1088,51 @@ const Playground = () => {
 
   const loadSave = (kind, item) => {
     if (kind === "compiler") {
-      setLanguage(item.language || "python");
-      setCode(item.code || "");
-      setCompilerTemplateId("");
-      setActiveEditorTab("editor");
-    } else {
+      const nextLanguage = item.language || "python";
+      const savedFiles = Array.isArray(item.extra?.files)
+        ? item.extra.files
+            .filter((fileItem) => fileItem && fileItem.name)
+            .map((fileItem) => ({ name: String(fileItem.name), content: String(fileItem.content || "") }))
+        : [];
+      const fileName = getDefaultMainFileName(nextLanguage);
+      const nextFiles = savedFiles.length > 0 ? savedFiles : [{ name: fileName, content: item.code || "" }];
+      setLanguage(nextLanguage);
+      setCompilerFiles(nextFiles);
+      const preferredActive = item.extra?.active_file;
+      const hasPreferred = preferredActive && nextFiles.some((fileItem) => fileItem.name === preferredActive);
+      setActiveCompilerFile(hasPreferred ? preferredActive : nextFiles[0].name);
+      setCompilerSyncVersion((prev) => prev + 1);
+      setStatus("Loaded");
+    } else if (kind === "app") {
       setAppCode(item.code || "");
+    } else if (kind === "sql") {
+      setSqlQueryForActiveTab(item.code || "");
+      setSqlResultColumns([]);
+      setSqlResultRows([]);
+      setSqlBatchResults([]);
+      setSqlRowOffset(0);
+      setSqlTotalRows(0);
+      if (item.extra?.dataset_id) {
+        setSqlDatasetId(item.extra.dataset_id);
+      }
+      if (item.extra?.output) {
+        setSqlOutput(item.extra.output);
+      }
+    } else if (kind === "notebook") {
+      const savedCells = Array.isArray(item.extra?.cells)
+        ? item.extra.cells.map((cell, index) => ({
+            id: cell.id || `cell-${index + 1}`,
+            type: cell.type === "text" ? "text" : "code",
+            code: cell.code || "",
+            output: cell.output || "",
+            status: "idle",
+            meta: cell.meta || "",
+          }))
+        : DEFAULT_NOTEBOOK_CELLS;
+      setNotebookCells(savedCells.length > 0 ? savedCells : DEFAULT_NOTEBOOK_CELLS);
+      if (item.extra?.language) {
+        setNotebookLanguage(item.extra.language);
+      }
     }
   };
 
@@ -568,8 +1145,12 @@ const Playground = () => {
       const next = (kind === "compiler" ? compilerSaves : appSaves).filter((item) => item.id !== id);
       if (kind === "compiler") {
         setCompilerSaves(next);
-      } else {
+      } else if (kind === "app") {
         setAppSaves(next);
+      } else if (kind === "sql") {
+        setSqlSaves((prev) => prev.filter((item) => item.id !== id));
+      } else if (kind === "notebook") {
+        setNotebookSaves((prev) => prev.filter((item) => item.id !== id));
       }
     } catch (error) {
       window.alert(error.message || "Unable to delete this saved file.");
@@ -583,14 +1164,14 @@ const Playground = () => {
         <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900">Premium Developer Playground</h1>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">Use compiler mode for fast code execution, then switch into App Playground for larger interactive previews. Everything is aligned for a cleaner, more seamless practice flow.</p>
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">Compiler first for quick coding. App Playground stays ready for larger interactive previews.</p>
           </div>
           <div className="rounded-[22px] border border-blue-100 bg-white/80 px-4 py-3 text-sm font-semibold text-slate-700">
-            Saved slots per workspace: <span className="text-blue-600">{SAVE_LIMIT}</span>
+            Saved slots per workspace: <span className="text-blue-600">{effectiveSaveLimit}</span>
           </div>
         </div>
         <div className="mt-5 flex flex-wrap gap-3">
-          {MODULES.map((module) => (
+          {modules.map((module) => (
             <button key={module.id} type="button" onClick={() => module.live && setActiveModule(module.id)} className={`rounded-full px-4 py-2 text-sm font-bold ${activeModule === module.id ? "bg-gradient-to-r from-blue-600 to-teal-500 text-white" : module.live ? "border border-blue-100 bg-white text-slate-700" : "border border-slate-200 bg-slate-50 text-slate-400"}`}>
               {module.label} {!module.live && <span className="ml-2 text-[10px] uppercase tracking-[0.25em]">Soon</span>}
             </button>
@@ -598,165 +1179,164 @@ const Playground = () => {
         </div>
       </section>
 
-      {activeModule === "compiler" && (
+            {activeModule === "compiler" && (
         <section className="space-y-4">
-          <div className="erp-card rounded-[24px] border border-emerald-100 bg-emerald-50/70 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-emerald-700">IDE Mode</p>
-            <h2 className="mt-2 text-xl font-bold text-slate-900">VS Code Style Playground</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              We kept your browser playground, but laid it out like a mini IDE with an explorer, editor tabs, a bottom terminal, and a right-side workspace panel.
-            </p>
+          <div className="erp-card rounded-[28px] border border-[#dbe8ff] bg-white p-5 shadow-[0_18px_40px_rgba(37,99,235,0.06)]">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.32em] text-blue-700">Online Compiler</p>
+                <h2 className="mt-2 text-2xl font-bold text-slate-900">OneCompiler Workspace</h2>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{COMPILER_LANGUAGE_OPTIONS.length}+ languages</span>
+                <span className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{status}</span>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">{compilerSaves.length}/{effectiveSaveLimit} saves</span>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr),minmax(0,1fr),auto,auto]">
+              <label className="space-y-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Language</span>
+                <select
+                  value={language}
+                  onChange={(e) => changeCompilerLanguage(e.target.value)}
+                  className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm font-semibold text-slate-700 outline-none"
+                >
+                  {COMPILER_LANGUAGE_OPTIONS.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="space-y-2">
+                <span className="block text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Save</span>
+                <div className="flex gap-2">
+                  <input
+                    value={compilerSaveName}
+                    onChange={(e) => setCompilerSaveName(e.target.value)}
+                    placeholder="Name"
+                    className="w-40 rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none"
+                  />
+                  <button type="button" onClick={() => handleSave("compiler")} className="rounded-2xl bg-gradient-to-r from-blue-600 to-teal-500 px-4 py-3 text-sm font-bold text-white">
+                    Save
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <span className="block text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Local Run</span>
+                <button
+                  type="button"
+                  onClick={runCompilerLocal}
+                  className="rounded-2xl bg-gradient-to-r from-slate-800 to-slate-700 px-5 py-3 text-sm font-bold text-white"
+                >
+                  {localRunStatus === "running" ? "Running..." : "Run Locally"}
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div className="overflow-hidden rounded-[30px] border border-[#dbe8ff] bg-[#101826] shadow-[0_30px_70px_rgba(15,23,42,0.25)]">
-            <div className="flex items-center justify-between gap-4 border-b border-[#1f2a3d] bg-[#131d2b] px-5 py-3">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-[#ff5f57]" /><span className="h-3 w-3 rounded-full bg-[#febc2e]" /><span className="h-3 w-3 rounded-full bg-[#28c840]" /></div>
-                <span className="text-sm font-semibold text-slate-200">CLG eLab Playground</span>
-                <span className="rounded-full border border-slate-700 bg-[#0f1724] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-300">{compilerMainFile}</span>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <select value={language} onChange={(e) => selectCompilerTemplate(e.target.value, (COMPILER_TEMPLATES[e.target.value] || [])[0]?.id)} className="rounded-full border border-slate-700 bg-[#0f1724] px-4 py-2 text-sm font-semibold text-slate-100 outline-none">
-                  {["python", "javascript", "java", "cpp"].map((item) => <option key={item} value={item} disabled={!runnableLanguages.includes(item)}>{item.toUpperCase()} {!runnableLanguages.includes(item) ? "(Soon)" : ""}</option>)}
-                </select>
-                <button type="button" onClick={runCompiler} disabled={isRunning} className="rounded-full bg-gradient-to-r from-blue-600 to-teal-500 px-5 py-2 text-sm font-bold text-white">{isRunning ? "Running..." : "Run Code"}</button>
-                <button type="button" onClick={stopCompiler} disabled={!isRunning} className="rounded-full border border-rose-400/40 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-200 disabled:cursor-not-allowed disabled:opacity-40">Stop</button>
-              </div>
-            </div>
-
-            <div className="grid min-h-[980px] grid-cols-[56px,240px,minmax(0,1fr),320px]">
-              <div className="flex flex-col items-center gap-4 border-r border-[#1f2a3d] bg-[#0c1420] py-4 text-slate-400">
-                <span className="rounded-2xl bg-[#162133] px-3 py-2 text-lg text-blue-300">≡</span>
-                <span className="rounded-2xl px-3 py-2 text-lg">F</span>
-                <span className="rounded-2xl px-3 py-2 text-lg">S</span>
-                <span className="rounded-2xl px-3 py-2 text-lg">R</span>
-              </div>
-
-              <aside className="border-r border-[#1f2a3d] bg-[#0f1724] p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-500">Explorer</p>
-                <div className="mt-4 rounded-[20px] border border-slate-800 bg-[#111c2b] p-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300">Workspace</p>
-                  <div className="mt-3 space-y-1">
-                    {explorerItems.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setActiveEditorTab(item.id)}
-                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm ${activeEditorTab === item.id ? "bg-blue-500/20 text-white" : "text-slate-300 hover:bg-white/5"}`}
-                      >
-                        <span className="truncate">{item.name}</span>
-                        <span className="ml-2 text-[10px] uppercase tracking-[0.2em] text-slate-500">{item.kind}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-4 rounded-[20px] border border-slate-800 bg-[#111c2b] p-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-300">Sample</p>
-                  <select value={compilerTemplateId} onChange={(e) => selectCompilerTemplate(language, e.target.value)} className="mt-3 w-full rounded-2xl border border-slate-700 bg-[#0f1724] px-4 py-2 text-sm font-semibold text-slate-100 outline-none">
-                    {currentCompilerTemplates.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-                  </select>
-                  <p className="mt-3 text-sm leading-6 text-slate-400">{currentCompilerTemplate?.note}</p>
-                </div>
-              </aside>
-
-              <div className="grid min-h-0 grid-rows-[auto,minmax(0,1fr),320px] bg-[#111827]">
-                <div className="flex items-center gap-2 border-b border-[#1f2a3d] bg-[#0f1724] px-4 py-2">
-                  {explorerItems.slice(0, Math.min(3, explorerItems.length)).map((item) => (
-                    <button
-                      key={`tab-${item.id}`}
-                      type="button"
-                      onClick={() => setActiveEditorTab(item.id)}
-                      className={`rounded-t-2xl border border-b-0 px-4 py-2 text-sm font-semibold ${activeEditorTab === item.id ? "border-[#2f3f58] bg-[#111827] text-white" : "border-transparent bg-transparent text-slate-400"}`}
-                    >
-                      {item.name}
+          <section className="erp-card rounded-[24px] border border-[#dbe8ff] bg-white p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap gap-2">
+                {compilerFiles.map((fileItem) => (
+                  <div key={fileItem.name} className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold ${activeCompilerFile === fileItem.name ? "border-blue-400 bg-blue-50 text-blue-700" : "border-slate-200 bg-slate-50 text-slate-700"}`}>
+                    <button type="button" onClick={() => setActiveCompilerTab(fileItem.name)}>
+                      {fileItem.name}
                     </button>
-                  ))}
-                </div>
+                    {compilerFiles.length > 1 && (
+                      <button type="button" onClick={() => removeCompilerFile(fileItem.name)} className="ml-1 text-rose-600">
+                        x
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button type="button" onClick={addCompilerFile} className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                Add Tab
+              </button>
+            </div>
+          </section>
 
-                <div className="min-h-0">
-                  {activeEditorTab === "editor" ? (
-                    <Editor height="100%" language={language === "cpp" ? "cpp" : language} theme="vs-dark" value={code} onChange={(value = "") => setCode(value)} options={{ minimap: { enabled: true }, fontSize: 14, smoothScrolling: true, scrollBeyondLastLine: false, padding: { top: 18, bottom: 18 }, fontFamily: "'JetBrains Mono', monospace" }} />
-                  ) : (
-                    <div className="flex h-full items-center justify-center border-b border-[#1f2a3d] bg-[#111827] p-8 text-center text-sm leading-7 text-slate-400">
-                      <div>
-                        <p className="text-base font-semibold text-slate-200">{explorerItems.find((item) => item.id === activeEditorTab)?.name || "Workspace item"}</p>
-                        <p className="mt-3">This panel is part of the IDE-style explorer. Uploaded files and saved snapshots are listed here so students can navigate the workspace like VS Code.</p>
-                        <p className="mt-3">The editable source file remains <span className="font-semibold text-blue-300">{compilerMainFile}</span>.</p>
+          <OneCompilerEmbed
+            language={language}
+            code={activeCompilerContent}
+            files={compilerFiles}
+            syncVersion={compilerSyncVersion}
+            onCodeChange={(nextCode) => {
+              setCompilerFiles((prev) => prev.map((item) => (
+                item.name === activeCompilerFile ? { ...item, content: nextCode } : item
+              )));
+              setStatus("Synced");
+            }}
+            onFilesChange={(nextFiles) => {
+              if (!Array.isArray(nextFiles) || nextFiles.length === 0) {
+                return;
+              }
+              setCompilerFiles(nextFiles);
+              if (!nextFiles.some((item) => item.name === activeCompilerFile)) {
+                setActiveCompilerFile(nextFiles[0].name);
+              }
+              setStatus("Synced");
+            }}
+            theme="dark"
+            title="Code Editor"
+          />
+
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr),minmax(0,1fr)]">
+            <section className="erp-card rounded-[28px] p-5">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-blue-600">Saved Files</p>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">{compilerSaves.length}/{effectiveSaveLimit}</span>
+              </div>
+              <input
+                value={compilerSaveSearch}
+                onChange={(e) => setCompilerSaveSearch(e.target.value)}
+                placeholder="Search saves"
+                className="mt-4 w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none"
+              />
+              <div className="mt-4 space-y-2">
+                {compilerSaves.length === 0 ? (
+                  <p className="text-sm text-slate-500">No saved compiler files yet.</p>
+                ) : filteredCompilerSaves.length === 0 ? (
+                  <p className="text-sm text-slate-500">No matches found.</p>
+                ) : (
+                  filteredCompilerSaves.map((item) => (
+                    <div key={item.id} className="rounded-[18px] border border-blue-100 bg-blue-50/60 p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-slate-800">{item.name}</p>
+                          <p className="mt-1 text-xs text-slate-500">{item.language || "python"} · {formatSavedAt(item.updated_at || item.updatedAt)}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => loadSave("compiler", item)} className="rounded-full border border-blue-100 bg-white px-3 py-1 text-xs font-semibold text-blue-700">Load</button>
+                          <button type="button" onClick={() => deleteSave("compiler", item.id)} className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">Delete</button>
+                        </div>
                       </div>
                     </div>
-                  )}
-                </div>
-
-                <div className="border-t border-[#1f2a3d] bg-[#0a0f18] p-4">
-                  <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
-                    <div className="flex items-center gap-3">
-                      <span className="rounded-full bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-slate-300">Terminal</span>
-                      <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">{status}</span>
-                    </div>
-                    <span className="text-xs font-semibold text-emerald-400">{runtime || "waiting"}</span>
-                  </div>
-                  <pre className="mt-4 h-[170px] overflow-auto whitespace-pre-wrap rounded-[20px] border border-slate-800 bg-slate-950 p-4 text-sm leading-7 text-slate-100">{output}</pre>
-                  {language === "python" && (
-                    <div className="mt-4 flex gap-3">
-                      <input
-                        value={terminalEntry}
-                        onChange={(e) => setTerminalEntry(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            sendTerminalInput();
-                          }
-                        }}
-                        placeholder={isRunning ? "Type into terminal and press Enter" : "Run Python code to start the live terminal"}
-                        className="flex-1 rounded-full border border-slate-700 bg-[#0f1724] px-4 py-3 text-sm text-slate-100 outline-none"
-                      />
-                      <button type="button" onClick={sendTerminalInput} disabled={!isRunning} className="rounded-full bg-gradient-to-r from-blue-600 to-teal-500 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">Enter</button>
-                    </div>
-                  )}
-                  {language !== "python" && (
-                    <textarea value={stdin} onChange={(e) => setStdin(e.target.value)} placeholder={stdinHint} className="mt-4 h-24 w-full rounded-[20px] border border-slate-700 bg-[#0f1724] px-4 py-4 text-sm text-slate-100 outline-none" />
-                  )}
-                </div>
+                  ))
+                )}
               </div>
+            </section>
 
-              <aside className="border-l border-[#1f2a3d] bg-[#0f1724] p-4">
-                <div className="rounded-[20px] border border-slate-800 bg-[#111c2b] p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-300">Workspace Actions</p>
-                  <div className="mt-4 flex gap-3">
-                    <input value={compilerSaveName} onChange={(e) => setCompilerSaveName(e.target.value)} placeholder="Enter save name" className="flex-1 rounded-full border border-slate-700 bg-[#0f1724] px-4 py-2 text-sm text-slate-100 outline-none" />
-                    <button type="button" onClick={() => handleSave("compiler")} className="rounded-full bg-gradient-to-r from-blue-600 to-teal-500 px-4 py-2 text-sm font-bold text-white">Save</button>
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    {compilerSaves.length === 0 ? <p className="text-sm text-slate-500">No saved compiler files yet.</p> : compilerSaves.map((item) => <div key={item.id} className="rounded-[18px] border border-slate-800 bg-[#0f1724] px-3 py-3"><div className="flex items-center justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-100">{item.name}</p><p className="text-xs text-slate-500">{formatSavedAt(item.updated_at || item.updatedAt)}</p></div><div className="flex gap-2"><button type="button" onClick={() => loadSave("compiler", item)} className="rounded-full border border-slate-700 bg-[#111c2b] px-3 py-1 text-xs font-semibold text-blue-300">Load</button><button type="button" onClick={() => deleteSave("compiler", item.id)} className="rounded-full border border-rose-400/30 bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-200">Delete</button></div></div></div>)}
-                  </div>
-                </div>
-
-                <div className="mt-4 rounded-[20px] border border-slate-800 bg-[#111c2b] p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-300">Workspace Files</p>
-                  <input type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))} className="mt-4 block w-full rounded-[20px] border border-slate-700 bg-[#0f1724] px-4 py-3 text-sm text-slate-200" />
-                  <div className="mt-3 space-y-2">
-                    {files.length === 0 ? <p className="text-sm text-slate-500">No files selected yet.</p> : files.map((file) => <div key={`${file.name}-${file.size}`} className="rounded-[16px] border border-slate-800 bg-[#0f1724] px-3 py-2 text-sm font-medium text-slate-200">{file.name}</div>)}
-                  </div>
-                </div>
-
-                <div className="mt-4 rounded-[20px] border border-slate-800 bg-[#111c2b] p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-300">Runtime</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {(capabilities.python_modules || []).slice(0, 10).map((moduleName) => <span key={moduleName} className="rounded-full border border-slate-700 bg-[#0f1724] px-3 py-1 text-xs font-semibold text-slate-300">{moduleName}</span>)}
-                  </div>
-                  <div className="mt-4 space-y-3 text-sm leading-7 text-slate-400">
-                    <p>- Python uses a live terminal session inside the bottom panel.</p>
-                    <p>- Uploaded helper files stay listed in the explorer like a mini project workspace.</p>
-                    <p>- Java and C++ remain preview-only until runtimes are installed on the machine.</p>
-                  </div>
-                </div>
-              </aside>
-            </div>
+            <section className="erp-card rounded-[28px] p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-blue-600">Local Runtime Output</p>
+              <textarea
+                value={localRunInput}
+                onChange={(e) => setLocalRunInput(e.target.value)}
+                placeholder="Program input (optional)"
+                className="mt-4 h-24 w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none"
+              />
+              <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{localRunMeta || "Output"}</p>
+                <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap text-xs text-slate-700">{localRunOutput}</pre>
+              </div>
+            </section>
           </div>
         </section>
       )}
-
       {activeModule === "app" && (
         <section className="space-y-6">
           <div className="erp-card rounded-[24px] border border-blue-100 bg-blue-50/70 p-5">
@@ -829,7 +1409,7 @@ const Playground = () => {
                 <div className="mt-4 space-y-3 text-sm leading-7 text-slate-600">
                   <p>- Choose from 5 sample app starters and load them instantly.</p>
                   <p>- Upload app data files and access them by filename inside Streamlit.</p>
-                  <p>- Save up to {SAVE_LIMIT} app files per user in this browser.</p>
+                  <p>- Save up to {effectiveSaveLimit} app files per user in this browser.</p>
                   <p>- Use the larger live session or open in a new tab for full-screen review.</p>
                 </div>
               </section>
@@ -838,7 +1418,598 @@ const Playground = () => {
         </section>
       )}
 
-      {!MODULES.find((item) => item.id === activeModule)?.live && (
+      {activeModule === "sql" && (
+        <section className="space-y-5">
+          <div className="erp-card rounded-[28px] border border-[#dbe8ff] bg-white p-5">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr),minmax(0,1fr),auto,180px]">
+              <label className="space-y-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Dataset</span>
+                <select
+                  value={sqlDatasetId}
+                  onChange={(e) => setSqlDatasetId(e.target.value)}
+                  className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm font-semibold text-slate-700 outline-none"
+                >
+                  {sqlDatasets.map((dataset) => (
+                    <option key={dataset.id} value={dataset.id}>
+                      {dataset.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Save</span>
+                <div className="flex gap-2">
+                  <input
+                    value={sqlSaveName}
+                    onChange={(e) => setSqlSaveName(e.target.value)}
+                    placeholder="Save name"
+                    className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none"
+                  />
+                  <button type="button" onClick={() => handleSave("sql")} className="rounded-2xl bg-gradient-to-r from-blue-600 to-teal-500 px-4 py-3 text-sm font-bold text-white">
+                    Save
+                  </button>
+                </div>
+              </label>
+              <div className="space-y-2">
+                <span className="block text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Execute</span>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => runSqlQuery(0)}
+                    disabled={sqlRunning}
+                    className="rounded-2xl bg-gradient-to-r from-slate-800 to-slate-700 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {sqlRunning ? "Running..." : "Run Current"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={runAllSqlQueries}
+                    disabled={sqlRunning}
+                    className="rounded-2xl border border-blue-200 bg-white px-4 py-3 text-sm font-semibold text-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Run All
+                  </button>
+                </div>
+              </div>
+              <label className="space-y-2">
+                <span className="block text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Page Size</span>
+                <select
+                  value={sqlRowLimit}
+                  onChange={(e) => {
+                    const nextLimit = Number(e.target.value) || SQL_PAGE_SIZE;
+                    setSqlRowLimit(nextLimit);
+                    setSqlRowOffset(0);
+                    if (sqlResultColumns.length > 0 || sqlResultRows.length > 0) {
+                      runSqlQuery(0);
+                    }
+                  }}
+                  className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm font-semibold text-slate-700 outline-none"
+                >
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={250}>250</option>
+                  <option value={500}>500</option>
+                </select>
+              </label>
+            </div>
+            {activeSqlDataset && (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <p className="text-sm text-slate-600">{activeSqlDataset.description}</p>
+                {activeSqlDataset.source && (
+                  <span className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                    Source: {activeSqlDataset.source}
+                  </span>
+                )}
+                <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                  Dataset rows: {activeSqlDatasetRowCount.toLocaleString()}
+                </span>
+              </div>
+            )}
+            {sqlDatasetId === "northwind" && (
+              <div className="mt-3 flex flex-wrap items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50/40 px-3 py-2">
+                {northwindStatus && (
+                  <p className="text-xs text-slate-600">
+                    {northwindStatus.message} ({northwindStatus.table_count} tables, {northwindStatus.row_count} rows)
+                  </p>
+                )}
+                {northwindStatus && (
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${northwindStatus.is_complete ? "border border-emerald-100 bg-emerald-50 text-emerald-700" : "border border-amber-100 bg-amber-50 text-amber-700"}`}>
+                    {northwindStatus.is_complete ? "Complete core schema" : `Missing: ${northwindStatus.missing_core_tables?.join(", ") || "unknown"}`}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr),minmax(0,1fr)]">
+            <section className="erp-card rounded-[28px] p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.32em] text-blue-600">SQL Editor</p>
+              <div className="mt-4 mb-2 flex flex-wrap items-center gap-2">
+                {sqlTabs.map((tab) => (
+                  <div
+                    key={tab.id}
+                    className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs ${
+                      tab.id === activeSqlTabId
+                        ? "border-blue-300 bg-blue-50 text-blue-700"
+                        : "border-slate-200 bg-white text-slate-600"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setActiveSqlTabId(tab.id)}
+                      className="font-semibold"
+                      title={tab.name}
+                    >
+                      {tab.name}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = window.prompt("Rename SQL tab", tab.name);
+                        if (next !== null) renameSqlTab(tab.id, next);
+                      }}
+                      className="text-[10px] text-slate-400 hover:text-slate-600"
+                      title="Rename tab"
+                    >
+                      Edit
+                    </button>
+                    {sqlTabs.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => closeSqlTab(tab.id)}
+                        className="text-[10px] text-rose-400 hover:text-rose-600"
+                        title="Close tab"
+                      >
+                        x
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addSqlTab}
+                  className="ml-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-base font-bold leading-none text-slate-700"
+                  title="New SQL tab"
+                >
+                  +
+                </button>
+              </div>
+              <Editor
+                height="420px"
+                language="sql"
+                theme="vs"
+                value={sqlQuery}
+                onMount={(editor) => {
+                  sqlEditorRef.current = editor;
+                }}
+                onChange={(value = "") => {
+                  setSqlQueryForActiveTab(value);
+                  setSqlBatchResults([]);
+                  setSqlRowOffset(0);
+                }}
+                options={{ minimap: { enabled: false }, fontSize: 14, scrollBeyondLastLine: false }}
+              />
+              <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{sqlMeta || "Output"}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-500">{sqlPageLabel}</span>
+                    <span className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600">
+                      Page {sqlCurrentPage || 0}/{sqlTotalPages || 0}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={exportSqlResultsCsv}
+                      disabled={sqlResultRows.length === 0}
+                      className="rounded-full border border-blue-100 bg-white px-3 py-1 text-xs font-semibold text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Export CSV
+                    </button>
+                  </div>
+                </div>
+                {sqlOutput.toLowerCase().includes("timed out") && (
+                  <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+                    Query timeout detected. Try adding filters or LIMIT for faster execution.
+                  </div>
+                )}
+                {sqlBatchResults.length > 1 ? (
+                  <div className="mt-3 space-y-3">
+                    {sqlBatchResults.map((result, idx) => (
+                      <div key={result.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-xs font-semibold text-slate-700">
+                            Result {idx + 1} • {Number(result.executionTimeMs || 0).toFixed(1)} ms • {result.rowCount} rows
+                          </p>
+                          <p className="max-w-full truncate text-[11px] text-slate-500">{result.query}</p>
+                        </div>
+                        {result.columns.length > 0 ? (
+                          <div className="max-h-56 overflow-auto rounded-lg border border-slate-200">
+                            <table className="min-w-full text-left text-xs text-slate-700">
+                              <thead className="sticky top-0 bg-slate-100">
+                                <tr>
+                                  {result.columns.map((column) => (
+                                    <th key={`${result.id}-${column}`} className="border-b border-slate-200 px-3 py-2 font-semibold text-slate-600">
+                                      {column}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {result.rows.map((row, rowIndex) => (
+                                  <tr key={`${result.id}-row-${rowIndex}`} className={rowIndex % 2 === 0 ? "bg-white" : "bg-slate-50"}>
+                                    {result.columns.map((column) => (
+                                      <td
+                                        key={`${result.id}-cell-${rowIndex}-${column}`}
+                                        className={`border-b border-slate-100 px-3 ${playgroundSettings.sqlTableDenseMode ? "py-1 text-[11px]" : "py-2 text-xs"} align-top font-mono`}
+                                      >
+                                        {String(row?.[column] ?? "")}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <pre className="max-h-56 overflow-auto whitespace-pre-wrap text-xs text-slate-700">{result.output}</pre>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : sqlResultColumns.length > 0 ? (
+                  <div className="mt-2 max-h-64 overflow-auto rounded-xl border border-slate-200 bg-white">
+                    <table className="min-w-full text-left text-xs text-slate-700">
+                      <thead className="sticky top-0 bg-slate-100">
+                        <tr>
+                          {sqlResultColumns.map((column) => (
+                            <th key={column} className="border-b border-slate-200 px-3 py-2 font-semibold text-slate-600">
+                              {column}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sqlResultRows.map((row, rowIndex) => (
+                          <tr key={`sql-row-${rowIndex}`} className={rowIndex % 2 === 0 ? "bg-white" : "bg-slate-50"}>
+                            {sqlResultColumns.map((column) => (
+                              <td
+                                key={`sql-cell-${rowIndex}-${column}`}
+                                className={`border-b border-slate-100 px-3 ${playgroundSettings.sqlTableDenseMode ? "py-1 text-[11px]" : "py-2 text-xs"} align-top font-mono`}
+                              >
+                                {String(row?.[column] ?? "")}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap text-xs text-slate-700">{sqlOutput}</pre>
+                )}
+                {sqlResultColumns.length > 0 && (
+                  <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={sqlJumpPage}
+                        onChange={(e) => setSqlJumpPage(e.target.value.replace(/[^\d]/g, ""))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            const target = Number(sqlJumpPage || 0);
+                            if (target > 0) {
+                              goToSqlPage(target);
+                            }
+                          }
+                        }}
+                        placeholder="Page"
+                        className="w-20 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const target = Number(sqlJumpPage || 0);
+                          if (target > 0) {
+                            goToSqlPage(target);
+                          }
+                        }}
+                        disabled={sqlRunning || !sqlJumpPage}
+                        className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Go
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => goToSqlPage(sqlCurrentPage - 1)}
+                      disabled={sqlRunning || sqlRowOffset <= 0}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => goToSqlPage(sqlCurrentPage + 1)}
+                      disabled={sqlRunning || sqlRowOffset + sqlResultRows.length >= sqlTotalRows}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className={`erp-card h-full rounded-[28px] ${playgroundSettings.compactSqlSidebar ? "p-4" : "p-5"}`}>
+              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-blue-600">Schema + Saves</p>
+              {playgroundSettings.showSchemaDiagrams && activeSqlDataset?.diagram_key && SQL_SCHEMA_IMAGES[activeSqlDataset.diagram_key] && (
+                <div className="mt-3 rounded-[20px] border border-blue-100 bg-white p-2">
+                  <img
+                    src={SQL_SCHEMA_IMAGES[activeSqlDataset.diagram_key]}
+                    alt={`${activeSqlDataset.name} schema diagram`}
+                    className="w-full rounded-xl border border-blue-50 object-contain"
+                  />
+                </div>
+              )}
+              <div className={`mt-3 grid ${playgroundSettings.compactSqlSidebar ? "max-h-[280px]" : "max-h-[360px]"} gap-2 overflow-auto rounded-[20px] border border-blue-100 bg-blue-50/40 p-3 sm:grid-cols-2`}>
+                {(activeSqlDataset?.tables || []).map((table) => (
+                  <div key={table.name} className="rounded-xl border border-blue-100 bg-white px-3 py-2">
+                    <p className="text-sm font-semibold capitalize text-slate-800">
+                      {table.name} <span className="text-xs text-slate-500">({table.row_count} rows)</span>
+                    </p>
+                    <div className="mt-1 space-y-1">
+                      {table.columns.map((col) => (
+                        <p key={`${table.name}-${col.name}`} className="text-xs text-slate-500">
+                          <span className="font-semibold text-slate-700">{col.name}</span> : {col.type}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {(activeSqlDataset?.relationships || []).length > 0 && (
+                <div className="mt-3 rounded-[20px] border border-blue-100 bg-white p-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Relationships</p>
+                  <div className="mt-2 space-y-1">
+                    {activeSqlDataset.relationships.map((rel, idx) => (
+                      <p key={`${rel.from_table}-${rel.from_column}-${idx}`} className="text-xs text-slate-600">
+                        <span className="font-semibold">{rel.from_table}.{rel.from_column}</span>
+                        {" -> "}
+                        <span className="font-semibold">{rel.to_table}.{rel.to_column}</span>
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="mt-3 rounded-[20px] border border-blue-100 bg-white p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Sample Queries</p>
+                <div className="mt-2 space-y-2">
+                  {(activeSqlDataset?.sample_queries || []).slice(0, 3).map((query, idx) => (
+                    <button
+                      key={`sample-${idx}`}
+                      type="button"
+                      onClick={() => setSqlQueryForActiveTab(query)}
+                      className="w-full rounded-xl border border-blue-100 bg-blue-50/40 px-3 py-2 text-left text-xs font-medium text-slate-700"
+                    >
+                      {query}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-3 rounded-[20px] border border-blue-100 bg-white p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Recent Queries</p>
+                  <button
+                    type="button"
+                    onClick={clearSqlHistory}
+                    disabled={sqlHistory.length === 0}
+                    className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div className="mt-2 space-y-2">
+                  {!playgroundSettings.enableSqlHistory ? (
+                    <p className="text-xs text-slate-500">SQL history is disabled in Playground Settings.</p>
+                  ) : sqlHistory.length === 0 ? (
+                    <p className="text-xs text-slate-500">No query history yet.</p>
+                  ) : (
+                    sqlHistory.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setSqlQueryForActiveTab(item.query)}
+                        className="w-full rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-left text-xs text-slate-700"
+                      >
+                        <p className="truncate font-semibold">{item.query}</p>
+                        <p className="mt-1 text-[11px] text-slate-500">
+                          {Number(item.execution_time_ms || 0).toFixed(1)} ms | {item.row_count || 0} rows
+                        </p>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+              <input
+                value={sqlSaveSearch}
+                onChange={(e) => setSqlSaveSearch(e.target.value)}
+                placeholder="Search saves"
+                className="mt-4 w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none"
+              />
+              <div className="mt-3 space-y-2">
+                {filteredSqlSaves.length === 0 ? (
+                  <p className="text-sm text-slate-500">No saved SQL files yet.</p>
+                ) : (
+                  filteredSqlSaves.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between rounded-[18px] border border-blue-100 bg-blue-50/60 px-3 py-2">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">{item.name}</p>
+                        <p className="text-xs text-slate-500">{formatSavedAt(item.updated_at || item.updatedAt)}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => loadSave("sql", item)} className="rounded-full border border-blue-100 bg-white px-3 py-1 text-xs font-semibold text-blue-700">Load</button>
+                        <button type="button" onClick={() => deleteSave("sql", item.id)} className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">Delete</button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+          </div>
+        </section>
+      )}
+
+      {activeModule === "notebook" && (
+        <section className="space-y-5">
+          <div className="erp-card rounded-[28px] border border-[#dbe8ff] bg-white p-5">
+            <div className="grid gap-4 lg:grid-cols-[220px,minmax(0,1fr),auto]">
+              <label className="space-y-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Language</span>
+                <select
+                  value={notebookLanguage}
+                  onChange={(e) => setNotebookLanguage(e.target.value)}
+                  className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm font-semibold text-slate-700 outline-none"
+                >
+                  <option value="python">Python</option>
+                  <option value="javascript">JavaScript</option>
+                </select>
+              </label>
+              <label className="space-y-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Save</span>
+                <div className="flex gap-2">
+                  <input
+                    value={notebookSaveName}
+                    onChange={(e) => setNotebookSaveName(e.target.value)}
+                    placeholder="Save notebook"
+                    className="w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none"
+                  />
+                  <button type="button" onClick={() => handleSave("notebook")} className="rounded-2xl bg-gradient-to-r from-blue-600 to-teal-500 px-4 py-3 text-sm font-bold text-white">
+                    Save
+                  </button>
+                </div>
+              </label>
+              <div className="space-y-2">
+                <span className="block text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Run</span>
+                <button
+                  type="button"
+                  onClick={runAllNotebookCells}
+                  className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700"
+                >
+                  Run All Cells
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr),minmax(0,1fr)]">
+            <section className="space-y-4">
+              {notebookCells.map((cell, index) => (
+                <div key={cell.id} className="erp-card rounded-[24px] p-4">
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-600">
+                        {cell.type === "text" ? `Text ${index + 1}` : `Cell ${index + 1}`}
+                      </p>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                          cell.status === "running"
+                            ? "bg-amber-100 text-amber-700"
+                            : cell.status === "done"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : cell.status === "error"
+                                ? "bg-rose-100 text-rose-700"
+                                : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        {cell.status}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      {cell.type !== "text" && (
+                        <button type="button" onClick={() => runNotebookCell(index)} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                          {cell.status === "running" ? "Running..." : "Run"}
+                        </button>
+                      )}
+                      <button type="button" onClick={() => removeNotebookCell(cell.id)} className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                  {cell.type === "text" ? (
+                    <textarea
+                      value={cell.code}
+                      onChange={(e) => updateNotebookCell(cell.id, e.target.value)}
+                      placeholder="Type markdown notes..."
+                      rows={2}
+                      className="min-h-[68px] w-full resize-y rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none"
+                    />
+                  ) : (
+                    <>
+                      <Editor
+                        height={getNotebookEditorHeight(cell.code)}
+                        language={notebookLanguage === "javascript" ? "javascript" : "python"}
+                        theme="vs"
+                        value={cell.code}
+                        onChange={(value = "") => updateNotebookCell(cell.id, value)}
+                        options={{ minimap: { enabled: false }, fontSize: 14, scrollBeyondLastLine: false, lineNumbersMinChars: 2 }}
+                      />
+                      <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{cell.meta || "Output"}</p>
+                        <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap text-xs text-slate-700">{cell.output || "(no output yet)"}</pre>
+                      </div>
+                    </>
+                  )}
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => addNotebookCell("code", cell.id)}
+                      className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700"
+                    >
+                      + Code
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addNotebookCell("text", cell.id)}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
+                    >
+                      + Text
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </section>
+
+            <section className="erp-card rounded-[28px] p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-blue-600">Notebook Saves</p>
+              <input
+                value={notebookSaveSearch}
+                onChange={(e) => setNotebookSaveSearch(e.target.value)}
+                placeholder="Search saves"
+                className="mt-4 w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm text-slate-700 outline-none"
+              />
+              <div className="mt-4 space-y-2">
+                {filteredNotebookSaves.length === 0 ? (
+                  <p className="text-sm text-slate-500">No saved notebooks yet.</p>
+                ) : (
+                  filteredNotebookSaves.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between rounded-[18px] border border-blue-100 bg-blue-50/60 px-3 py-2">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">{item.name}</p>
+                        <p className="text-xs text-slate-500">{formatSavedAt(item.updated_at || item.updatedAt)}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => loadSave("notebook", item)} className="rounded-full border border-blue-100 bg-white px-3 py-1 text-xs font-semibold text-blue-700">Load</button>
+                        <button type="button" onClick={() => deleteSave("notebook", item.id)} className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">Delete</button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+          </div>
+        </section>
+      )}
+
+      {!modules.find((item) => item.id === activeModule)?.live && (
         <section className="erp-card rounded-[28px] p-6 text-center">
           <p className="text-sm font-semibold text-slate-500">This submodule is queued next.</p>
         </section>
@@ -848,3 +2019,6 @@ const Playground = () => {
 };
 
 export default Playground;
+
+
+

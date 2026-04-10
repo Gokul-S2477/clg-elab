@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { getStoredUser, isPrivilegedRole } from "../utils/roleHelper";
 import { getProctorSettings, saveProctorSettings } from "../utils/proctorSettings";
+import { getPlaygroundSettings, savePlaygroundSettings } from "../utils/playgroundSettings";
 
 const settingCards = [
   {
@@ -44,6 +45,7 @@ const settingCards = [
 const SystemSettings = () => {
   const [user] = useState(getStoredUser());
   const [settings, setSettings] = useState(() => getProctorSettings());
+  const [playgroundSettings, setPlaygroundSettings] = useState(() => getPlaygroundSettings());
   const [saveMessage, setSaveMessage] = useState("");
 
   useEffect(() => {
@@ -60,6 +62,21 @@ const SystemSettings = () => {
     const next = saveProctorSettings({ ...settings, [key]: !settings[key] });
     setSettings(next);
     setSaveMessage("Proctor settings updated");
+  };
+
+  const handlePlaygroundToggle = (key) => {
+    const next = savePlaygroundSettings({ ...playgroundSettings, [key]: !playgroundSettings[key] });
+    setPlaygroundSettings(next);
+    setSaveMessage("Playground settings updated");
+  };
+
+  const handlePlaygroundNumber = (key, value, min, max) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return;
+    const nextValue = Math.min(max, Math.max(min, parsed));
+    const next = savePlaygroundSettings({ ...playgroundSettings, [key]: nextValue });
+    setPlaygroundSettings(next);
+    setSaveMessage("Playground settings updated");
   };
 
   return (
@@ -102,6 +119,121 @@ const SystemSettings = () => {
         <p className="mt-2 text-sm leading-7 text-amber-700">
           A normal web app cannot truly disable installed browser extensions at the browser level. What we can do reliably is harden the page with copy/paste blocking, focus-loss guards, fullscreen checks, and protected overlays so the student workflow is much more controlled.
         </p>
+      </section>
+
+      <section className="erp-card rounded-[30px] p-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.4em] text-blue-600">Study Settings</p>
+        <h2 className="mt-3 text-2xl font-extrabold text-slate-900">Study Module Controls</h2>
+        <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
+          Control whether students must move through study topics in order or can open any lesson directly.
+        </p>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        <div className="erp-card rounded-[28px] p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-lg font-bold text-slate-900">Enable Study lock mode</p>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                When enabled, students unlock SQL study topics sequentially. Turn it off if you want learners to jump freely between lessons from the sidebar.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handlePlaygroundToggle("studyLockMode")}
+              className={`rounded-full px-4 py-2 text-sm font-bold ${
+                playgroundSettings.studyLockMode
+                  ? "border border-blue-200 bg-blue-50 text-blue-700"
+                  : "border border-slate-200 bg-white text-slate-600"
+              }`}
+            >
+              {playgroundSettings.studyLockMode ? "Enabled" : "Disabled"}
+            </button>
+          </div>
+        </div>
+
+        <div className="erp-card rounded-[28px] border border-blue-100 bg-blue-50/70 p-5">
+          <p className="text-sm font-bold text-blue-900">Current behavior</p>
+          <p className="mt-2 text-sm leading-7 text-blue-800">
+            {playgroundSettings.studyLockMode
+              ? "Students can only open the next unlocked topic after completing the current one."
+              : "All study topics are open, so students can enter any topic directly."}
+          </p>
+        </div>
+      </section>
+
+      <section className="erp-card rounded-[30px] p-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.4em] text-blue-600">Playground Settings</p>
+        <h2 className="mt-3 text-2xl font-extrabold text-slate-900">Playground Controls</h2>
+        <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
+          Configure module visibility and advanced defaults for Compiler, SQL Playground, and Notebook Lab.
+        </p>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        {[
+          { key: "compilerEnabled", title: "Enable Compiler Lab", description: "Show or hide Compiler Lab for users." },
+          { key: "appEnabled", title: "Enable App Playground", description: "Show or hide Streamlit app playground." },
+          { key: "sqlEnabled", title: "Enable SQL Playground", description: "Show or hide SQL dataset playground." },
+          { key: "notebookEnabled", title: "Enable Notebook Lab", description: "Show or hide notebook-style coding lab." },
+          { key: "showSchemaDiagrams", title: "Show schema diagrams", description: "Display ER-like schema diagrams for supported SQL datasets." },
+          { key: "enableSqlHistory", title: "Enable SQL query history", description: "Keep local per-user SQL query history in browser storage." },
+          { key: "compactSqlSidebar", title: "Compact SQL sidebar", description: "Use tighter spacing in SQL schema panel." },
+          { key: "sqlTableDenseMode", title: "Dense SQL result table", description: "Use tighter row density for SQL result grids." },
+          { key: "autoRunLastSqlOnDatasetChange", title: "Auto-run on dataset change", description: "Run latest SQL query automatically after changing dataset." },
+          { key: "keepNotebookOutputsOnLanguageSwitch", title: "Keep notebook outputs on language switch", description: "Retain notebook outputs instead of clearing when language changes." },
+        ].map((item) => (
+          <div key={item.key} className="erp-card rounded-[28px] p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-lg font-bold text-slate-900">{item.title}</p>
+                <p className="mt-2 text-sm leading-7 text-slate-600">{item.description}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handlePlaygroundToggle(item.key)}
+                className={`rounded-full px-4 py-2 text-sm font-bold ${
+                  playgroundSettings[item.key]
+                    ? "border border-blue-200 bg-blue-50 text-blue-700"
+                    : "border border-slate-200 bg-white text-slate-600"
+                }`}
+              >
+                {playgroundSettings[item.key] ? "Enabled" : "Disabled"}
+              </button>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-3">
+        <div className="erp-card rounded-[24px] p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">SQL Page Size</p>
+          <input
+            type="number"
+            min={50}
+            max={500}
+            value={playgroundSettings.sqlPageSize}
+            onChange={(e) => handlePlaygroundNumber("sqlPageSize", e.target.value, 50, 500)}
+            className="mt-3 w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm font-semibold text-slate-700 outline-none"
+          />
+        </div>
+        <div className="erp-card rounded-[24px] p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Max Notebook Cells</p>
+          <input
+            type="number"
+            min={5}
+            max={100}
+            value={playgroundSettings.maxNotebookCells}
+            onChange={(e) => handlePlaygroundNumber("maxNotebookCells", e.target.value, 5, 100)}
+            className="mt-3 w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm font-semibold text-slate-700 outline-none"
+          />
+        </div>
+        <div className="erp-card rounded-[24px] border border-blue-100 bg-blue-50/70 p-5">
+          <p className="text-sm font-bold text-blue-900">Advanced Note</p>
+          <p className="mt-2 text-sm leading-7 text-blue-800">
+            These settings are applied immediately in Playground via browser storage and can be tuned without code changes.
+          </p>
+        </div>
       </section>
     </div>
   );

@@ -4,12 +4,9 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-DEFAULT_POSTGRES_URL = (
-    "postgresql://postgres:LEsIRfjlkpuCeygEOTDMNleWQawaVdTQ@maglev.proxy.rlwy.net:32773/railway"
-)
 DEFAULT_SQLITE_URL = "sqlite:///./erp_local.db"
 
-DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_POSTGRES_URL)
+DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_SQLITE_URL)
 ACTIVE_DATABASE_URL = DATABASE_URL
 
 
@@ -34,11 +31,15 @@ def _initialize_engine():
     global ACTIVE_DATABASE_URL
 
     preferred_engine = _build_engine(DATABASE_URL)
-    if DATABASE_URL.startswith("sqlite") or _can_connect(preferred_engine):
+    if DATABASE_URL.startswith("sqlite"):
         ACTIVE_DATABASE_URL = DATABASE_URL
         return preferred_engine
 
-    print(f"Falling back to local SQLite database at {DEFAULT_SQLITE_URL}")
+    if _can_connect(preferred_engine):
+        ACTIVE_DATABASE_URL = DATABASE_URL
+        return preferred_engine
+
+    print(f"Database connection failed for {DATABASE_URL}. Falling back to local SQLite at {DEFAULT_SQLITE_URL}")
     preferred_engine.dispose()
     ACTIVE_DATABASE_URL = DEFAULT_SQLITE_URL
     return _build_engine(DEFAULT_SQLITE_URL)

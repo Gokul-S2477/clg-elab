@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="520" viewBox="0 0 980 520">
+  <defs>
+    <style>
+      .box { fill: #f8fbff; stroke: #1f8ed8; stroke-width: 2; rx: 10; }
+      .head { fill: #e7f4ff; stroke: #1f8ed8; stroke-width: 2; }
+      .title { font-family: Arial, sans-serif; font-size: 18px; font-weight: 700; fill: #0f3f66; }
+      .text { font-family: Arial, sans-serif; font-size: 14px; fill: #1e293b; }
+      .pk { fill: #0b7285; font-weight: 700; }
+      .fk { fill: #1d4ed8; font-weight: 700; }
+      .line { stroke: #1f8ed8; stroke-width: 2; fill: none; stroke-dasharray: 6 5; }
+    </style>
+  </defs>
+
+  <rect x="40" y="50" width="260" height="140" class="box"/>
+  <rect x="40" y="50" width="260" height="34" class="head"/>
+  <text x="56" y="73" class="title">departments</text>
+  <text x="56" y="108" class="text"><tspan class="pk">PK</tspan> department_id</text>
+  <text x="56" y="134" class="text">department_name</text>
+  <text x="56" y="160" class="text">location</text>
+
+  <rect x="360" y="30" width="320" height="300" class="box"/>
+  <rect x="360" y="30" width="320" height="34" class="head"/>
+  <text x="376" y="53" class="title">employees</text>
+  <text x="376" y="88" class="text"><tspan class="pk">PK</tspan> employee_id</text>
+  <text x="376" y="114" class="text">first_name</text>
+  <text x="376" y="140" class="text">last_name</text>
+  <text x="376" y="166" class="text"><tspan class="fk">FK</tspan> department_id</text>
+  <text x="376" y="192" class="text">job_title</text>
+  <text x="376" y="218" class="text">salary</text>
+  <text x="376" y="244" class="text">hire_date</text>
+  <text x="376" y="270" class="text"><tspan class="fk">FK</tspan> manager_id (self)</text>
+
+  <rect x="720" y="220" width="220" height="180" class="box"/>
+  <rect x="720" y="220" width="220" height="34" class="head"/>
+  <text x="736" y="243" class="title">leave_requests</text>
+  <text x="736" y="278" class="text"><tspan class="pk">PK</tspan> request_id</text>
+  <text x="736" y="304" class="text"><tspan class="fk">FK</tspan> employee_id</text>
+  <text x="736" y="330" class="text">leave_type</text>
+  <text x="736" y="356" class="text">start_date / end_date</text>
+  <text x="736" y="382" class="text">status</text>
+
+  <path d="M300 120 L360 166" class="line"/>
+  <path d="M680 270 L720 304" class="line"/>
+  <path d="M520 300 C520 390, 680 390, 680 300" class="line"/>
+</svg>

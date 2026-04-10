@@ -765,11 +765,18 @@ const QuestionList = () => {
                   </div>
                 ) : (
                   filteredQuestions.map((question) => (
-                    <button
+                    <div
                       key={question.id}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => navigate(`/practice/${question.id}`)}
-                      className="flex w-full flex-col gap-3 rounded-[18px] border border-[#e3eeff] bg-[#fbfdff] px-4 py-4 text-left transition duration-300 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[0_18px_36px_rgba(37,99,235,0.08)] md:flex-row md:items-center md:justify-between"
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          navigate(`/practice/${question.id}`);
+                        }
+                      }}
+                      className="flex w-full cursor-pointer flex-col gap-3 rounded-[18px] border border-[#e3eeff] bg-[#fbfdff] px-4 py-4 text-left transition duration-300 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[0_18px_36px_rgba(37,99,235,0.08)] md:flex-row md:items-center md:justify-between"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-3">
@@ -838,7 +845,7 @@ const QuestionList = () => {
                           ))}
                         </div>
                       </div>
-                    </button>
+                    </div>
                   ))
                 )}
               </div>
@@ -903,8 +910,8 @@ const QuestionList = () => {
             </div>
 
             <div className="mt-4 grid grid-cols-7 gap-1.5 text-center text-[11px] font-semibold text-slate-400">
-              {["S", "M", "T", "W", "T", "F", "S"].map((day) => (
-                <span key={day}>{day}</span>
+              {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
+                <span key={`${day}-${index}`}>{day}</span>
               ))}
             </div>
 
