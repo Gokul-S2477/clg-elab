@@ -1,3 +1,5 @@
+import { apiGet, apiPut } from "./api";
+
 const PLAYGROUND_SETTINGS_KEY = "playground-settings";
 
 export const DEFAULT_PLAYGROUND_SETTINGS = {
@@ -27,6 +29,16 @@ export const getPlaygroundSettings = () => {
   } catch {
     return DEFAULT_PLAYGROUND_SETTINGS;
   }
+};
+
+export const fetchPlaygroundSettingsFromApi = async () => {
+  const payload = await apiGet('/app/preferences/playground');
+  return { ...DEFAULT_PLAYGROUND_SETTINGS, ...(payload?.data || {}) };
+};
+
+export const savePlaygroundSettingsToApi = async (nextSettings) => {
+  const payload = await apiPut('/app/preferences/playground', nextSettings);
+  return { ...DEFAULT_PLAYGROUND_SETTINGS, ...(payload?.data || {}) };
 };
 
 export const savePlaygroundSettings = (nextSettings) => {

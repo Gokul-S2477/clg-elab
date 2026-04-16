@@ -1,8 +1,11 @@
 import os
+from datetime import datetime
 
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+
+from app.crypto import hash_secret
 
 DEFAULT_SQLITE_URL = "sqlite:///./erp_local.db"
 
@@ -89,7 +92,7 @@ def ensure_schema_upgrades() -> None:
 
 def reset_database(drop_existing: bool = False) -> None:
     """Drop and recreate tables while handling Postgres and MySQL safely."""
-    from app.models import user, practice_arena  # noqa: F401
+    from app.models import exam_portal, practice_arena, user  # noqa: F401
 
     if drop_existing:
         low_url = ACTIVE_DATABASE_URL.lower()
@@ -111,7 +114,456 @@ def reset_database(drop_existing: bool = False) -> None:
 
     Base.metadata.create_all(bind=engine)
     ensure_schema_upgrades()
+    seed_default_users()
     seed_sample_question()
+    seed_exam_portal_data()
+    cleanup_expired_exam_artifacts()
+
+
+def seed_default_users() -> None:
+    from app.models.user import User, UserProfile, UserRole
+
+    defaults = [
+        {
+            "id": 1,
+            "name": "Student One",
+            "email": "gs9721@student.school",
+            "password": "gs9721",
+            "role": UserRole.student,
+            "profile": {
+                "identifier": "gs9721",
+                "department": "CSE",
+                "year": "3",
+                "section": "A",
+                "batch": "2026",
+            },
+        },
+        {
+            "id": 2,
+            "name": "Faculty Lead",
+            "email": "faculty@school",
+            "password": "faculty@123",
+            "role": UserRole.faculty,
+            "profile": {
+                "identifier": "faculty",
+                "department": "CSE",
+                "designation": "Faculty",
+            },
+        },
+        {
+            "id": 3,
+            "name": "Admin User",
+            "email": "admin@school",
+            "password": "admin@123",
+            "role": UserRole.admin,
+            "profile": {
+                "identifier": "admin",
+                "department": "Examinations",
+                "designation": "Admin",
+            },
+        },
+        {
+            "id": 4,
+            "name": "Super Admin",
+            "email": "superadmin@school",
+            "password": "superadmin@123",
+            "role": UserRole.super_admin,
+            "profile": {
+                "identifier": "superadmin",
+                "department": "Examinations",
+                "designation": "Super Admin",
+            },
+        },
+        {
+            "id": 5,
+            "name": "Student Two",
+            "email": "aa1201@student.school",
+            "password": "aa1201",
+            "role": UserRole.student,
+            "profile": {
+                "identifier": "aa1201",
+                "department": "CSE",
+                "year": "3",
+                "section": "A",
+                "batch": "2026",
+            },
+        },
+        {
+            "id": 6,
+            "name": "Student Three",
+            "email": "me2040@student.school",
+            "password": "me2040",
+            "role": UserRole.student,
+            "profile": {
+                "identifier": "me2040",
+                "department": "MECH",
+                "year": "4",
+                "section": "B",
+                "batch": "2025",
+            },
+        },
+    ]
+
+    session = SessionLocal()
+    try:
+        for user in defaults:
+            existing = session.query(User).filter(User.id == user["id"]).first()
+            if existing:
+                existing.name = user["name"]
+                existing.email = user["email"]
+                existing.password = hash_secret(user["password"])
+                existing.role = user["role"]
+            else:
+                existing = User(
+                    id=user["id"],
+                    name=user["name"],
+                    email=user["email"],
+                    password=hash_secret(user["password"]),
+                    role=user["role"],
+                )
+                session.add(existing)
+                session.flush()
+
+            profile = session.query(UserProfile).filter(UserProfile.user_id == user["id"]).first()
+            if profile:
+                profile.data = user["profile"]
+            else:
+                session.add(UserProfile(user_id=user["id"], data=user["profile"]))
+        session.commit()
+    finally:
+        session.close()
+
+
+def seed_exam_portal_data() -> None:
+    from datetime import datetime, timedelta
+
+    from slugify import slugify
+
+    from app.models.exam_portal import (
+        AccessScope,
+        AttemptStatus,
+        Department,
+        Exam,
+        ExamActivityLog,
+        ExamAttempt,
+        ExamAttemptAnswer,
+        ExamFacultyAccess,
+        ExamQuestion,
+        ExamQuestionLink,
+        ExamStatus,
+        ExamStudentAssignment,
+        QuestionKind,
+    )
+
+    departments = [
+        {"code": "CSE", "name": "Computer Science and Engineering"},
+        {"code": "ECE", "name": "Electronics and Communication Engineering"},
+        {"code": "MECH", "name": "Mechanical Engineering"},
+    ]
+    question_templates = [
+        {
+            "title": "Array Rotation Insight",
+            "question_type": QuestionKind.mcq,
+            "difficulty": "medium",
+            "tags": ["arrays", "logic"],
+            "prompt": "Which time complexity is achievable for rotating an array by k positions using the reverse technique?",
+            "options": [
+                {"id": "a", "label": "O(n^2)"},
+                {"id": "b", "label": "O(n log n)"},
+                {"id": "c", "label": "O(n)"},
+                {"id": "d", "label": "O(1)"},
+            ],
+            "correct_answers": ["c"],
+            "evaluation_guide": "Award full marks only when option O(n) is selected.",
+            "points": 10,
+        },
+        {
+            "title": "SQL Query Review",
+            "question_type": QuestionKind.sql,
+            "difficulty": "medium",
+            "tags": ["sql", "joins"],
+            "prompt": "Write a query to return each department name with the number of students assigned to it.",
+            "instructions": "Use the Departments and Students tables. Return department_name and student_count ordered by department_name.",
+            "answer_schema": {
+                "allowed_languages": ["sql"],
+                "preview_enabled": False,
+                "hidden_tests_enabled": False,
+            },
+            "metadata": {
+                "schema": "Departments(id, name), Students(id, name, department_id)",
+                "expected_shape": ["department_name", "student_count"],
+                "sample_tables": [
+                    {
+                        "name": "Departments",
+                        "columns": ["id", "name"],
+                        "rows": [["1", "CSE"], ["2", "ECE"], ["3", "MECH"]],
+                    },
+                    {
+                        "name": "Students",
+                        "columns": ["id", "name", "department_id"],
+                        "rows": [["1", "Asha", "1"], ["2", "Rahul", "1"], ["3", "Meena", "2"], ["4", "Karthik", "1"]],
+                    },
+                ],
+                "expected_output": "department_name | student_count\nCSE | 3\nECE | 1\nMECH | 0",
+            },
+            "evaluation_guide": "Check for correct join, grouping, and ordering.",
+            "points": 20,
+        },
+        {
+            "title": "Placement Readiness Note",
+            "question_type": QuestionKind.written,
+            "difficulty": "easy",
+            "tags": ["communication", "reflection"],
+            "prompt": "Explain in 120 to 180 words how you prepare before attending a coding assessment.",
+            "instructions": "The answer will be reviewed manually by faculty.",
+            "evaluation_guide": "Clarity, structure, and relevance should be scored manually.",
+            "points": 15,
+        },
+        {
+            "title": "Warmup Coding Skeleton",
+            "question_type": QuestionKind.coding,
+            "difficulty": "medium",
+            "tags": ["python", "javascript", "algorithms"],
+            "prompt": "Given a list of integers, return the second largest distinct number.",
+            "instructions": "Use the language selector, run against visible cases, and submit to evaluate visible and hidden cases.",
+            "answer_schema": {
+                "allowed_languages": ["python", "javascript", "cpp", "java", "c"],
+                "starter_code": {
+                    "python": "def solve(nums):\n    unique = sorted(set(nums))\n    return unique[-2]\n",
+                    "javascript": "function solve(nums) {\n  const unique = [...new Set(nums)].sort((a, b) => a - b);\n  return unique[unique.length - 2];\n}\n",
+                    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint solve(vector<int> nums) {\n  return 0;\n}\n",
+                    "java": "import java.util.*;\n\nclass Solution {\n  public static int solve(List<Integer> nums) {\n    return 0;\n  }\n}\n",
+                    "c": "#include <stdio.h>\n\nint solve() {\n  return 0;\n}\n",
+                },
+            },
+            "metadata": {
+                "visible_test_cases": [
+                    {"input": "[5, 1, 9, 9, 3]", "output": "5"},
+                    {"input": "[10, 8, 6, 4]", "output": "8"},
+                ],
+                "hidden_test_cases": [
+                    {"input": "[7, 7, 6, 5, 4]", "output": "6"},
+                    {"input": "[-1, -3, -2, -4]", "output": "-2"},
+                ],
+            },
+            "evaluation_guide": "Faculty can review logic, syntax, and completeness.",
+            "points": 25,
+        },
+    ]
+
+    session = SessionLocal()
+    try:
+        for department in departments:
+            existing_department = session.query(Department).filter(Department.code == department["code"]).first()
+            if existing_department:
+                existing_department.name = department["name"]
+            else:
+                session.add(Department(**department))
+
+        session.flush()
+
+        question_entities = {}
+        for template in question_templates:
+            existing_question = session.query(ExamQuestion).filter(ExamQuestion.title == template["title"]).first()
+            payload = {
+                "title": template["title"],
+                "question_type": template["question_type"],
+                "difficulty": template["difficulty"],
+                "tags": template.get("tags", []),
+                "prompt": template["prompt"],
+                "instructions": template.get("instructions", ""),
+                "options": template.get("options", []),
+                "correct_answers": template.get("correct_answers", []),
+                "evaluation_guide": template.get("evaluation_guide", ""),
+                "answer_schema": template.get("answer_schema", {}),
+                "question_metadata": template.get("metadata", {}),
+                "points": template["points"],
+                "created_by": 3,
+            }
+            if existing_question:
+                for field, value in payload.items():
+                    setattr(existing_question, field, value)
+                question_entities[template["title"]] = existing_question
+            else:
+                created = ExamQuestion(**payload)
+                session.add(created)
+                session.flush()
+                question_entities[template["title"]] = created
+
+        sample_start = datetime.utcnow() + timedelta(minutes=30)
+        sample_end = sample_start + timedelta(minutes=90)
+        exam_title = "Campus Hiring Readiness Assessment"
+        exam_slug = slugify(exam_title)
+        exam = session.query(Exam).filter(Exam.slug == exam_slug).first()
+        exam_payload = {
+            "title": exam_title,
+            "slug": exam_slug,
+            "description": "A mixed assessment for shortlisted departments with MCQ, written, coding, and SQL sections.",
+            "instructions": "Candidates must report before the start time, re-enter the exam password, and submit before the timer ends.",
+            "exam_password": hash_secret("phase1@123"),
+            "start_time": sample_start,
+            "end_time": sample_end,
+            "duration_minutes": 90,
+            "status": ExamStatus.published,
+            "access_scope": AccessScope.hybrid,
+            "shuffle_questions": True,
+            "shuffle_mcq_options": True,
+            "allow_late_entry": True,
+            "late_entry_grace_minutes": 15,
+            "show_score_immediately": False,
+            "auto_submit_enabled": True,
+            "total_marks": 70,
+            "settings": {
+                "departments": ["CSE"],
+                "batches": ["2026"],
+                "sections": ["A"],
+                "question_count": 4,
+                "faculty_can_preview": True,
+                "audit_log_enabled": True,
+            },
+            "created_by": 3,
+            "published_at": datetime.utcnow(),
+        }
+        if exam:
+            for field, value in exam_payload.items():
+                setattr(exam, field, value)
+        else:
+            exam = Exam(**exam_payload)
+            session.add(exam)
+            session.flush()
+
+        if not exam.question_links:
+            ordered_titles = [
+                "Array Rotation Insight",
+                "Placement Readiness Note",
+                "Warmup Coding Skeleton",
+                "SQL Query Review",
+            ]
+            for index, title in enumerate(ordered_titles, start=1):
+                question = question_entities[title]
+                session.add(
+                    ExamQuestionLink(
+                        exam_id=exam.id,
+                        question_id=question.id,
+                        section_name="Assessment Section",
+                        order_index=index,
+                        points=question.points,
+                        settings={"required": True},
+                    )
+                )
+
+        faculty_access = session.query(ExamFacultyAccess).filter(
+            ExamFacultyAccess.exam_id == exam.id,
+            ExamFacultyAccess.user_id == 2,
+        ).first()
+        if not faculty_access:
+            session.add(
+                ExamFacultyAccess(
+                    exam_id=exam.id,
+                    user_id=2,
+                    can_manage=True,
+                    can_test=True,
+                    can_review=True,
+                    can_download=True,
+                )
+            )
+
+        for student_id in [1, 5]:
+            assignment = session.query(ExamStudentAssignment).filter(
+                ExamStudentAssignment.exam_id == exam.id,
+                ExamStudentAssignment.student_id == student_id,
+            ).first()
+            if not assignment:
+                session.add(
+                    ExamStudentAssignment(
+                        exam_id=exam.id,
+                        student_id=student_id,
+                        assignment_source="department" if student_id == 1 else "selected",
+                        is_active=True,
+                    )
+                )
+
+        session.flush()
+
+        attempt = session.query(ExamAttempt).filter(
+            ExamAttempt.exam_id == exam.id,
+            ExamAttempt.student_id == 1,
+        ).first()
+        if not attempt:
+            attempt = ExamAttempt(
+                exam_id=exam.id,
+                student_id=1,
+                status=AttemptStatus.submitted,
+                started_at=sample_start - timedelta(minutes=5),
+                submitted_at=sample_start + timedelta(minutes=55),
+                last_saved_at=sample_start + timedelta(minutes=55),
+                password_verified_at=sample_start - timedelta(minutes=1),
+                waiting_room_entered_at=sample_start - timedelta(minutes=10),
+                score=52,
+                max_score=70,
+                auto_submitted=False,
+                submission_meta={"submitted_via": "manual"},
+            )
+            session.add(attempt)
+            session.flush()
+            for link in exam.question_links:
+                session.add(
+                    ExamAttemptAnswer(
+                        attempt_id=attempt.id,
+                        question_link_id=link.id,
+                        answer_text="Sample saved answer",
+                        selected_options=["c"] if link.question.question_type == QuestionKind.mcq else [],
+                        draft_payload={"language": "python"} if link.question.question_type == QuestionKind.coding else {},
+                        score=min(link.points, 12),
+                        max_score=link.points,
+                        is_correct=True if link.question.question_type == QuestionKind.mcq else None,
+                    )
+                )
+
+        has_logs = session.query(ExamActivityLog).filter(ExamActivityLog.exam_id == exam.id).first()
+        if not has_logs:
+            session.add_all(
+                [
+                    ExamActivityLog(
+                        exam_id=exam.id,
+                        actor_user_id=3,
+                        actor_role="admin",
+                        event_type="exam_created",
+                        details={"title": exam.title, "status": exam.status.value},
+                    ),
+                    ExamActivityLog(
+                        exam_id=exam.id,
+                        actor_user_id=3,
+                        actor_role="admin",
+                        event_type="exam_published",
+                        details={"departments": ["CSE"], "duration_minutes": exam.duration_minutes},
+                    ),
+                    ExamActivityLog(
+                        exam_id=exam.id,
+                        attempt_id=attempt.id,
+                        actor_user_id=1,
+                        actor_role="student",
+                        event_type="attempt_submitted",
+                        details={"score": attempt.score, "max_score": attempt.max_score},
+                    ),
+                ]
+            )
+
+        session.commit()
+    finally:
+        session.close()
+
+
+def cleanup_expired_exam_artifacts() -> None:
+    from app.models.exam_portal import ExamProctorSnapshot
+
+    session = SessionLocal()
+    try:
+        now = datetime.utcnow()
+        session.query(ExamProctorSnapshot).filter(ExamProctorSnapshot.expires_at <= now).delete()
+        session.commit()
+    finally:
+        session.close()
 
 
 def get_db():
@@ -921,7 +1373,7 @@ def seed_sample_question() -> None:
                 output_format=template.get("output_format", ""),
                 sql_schema=template.get("sql_schema", ""),
                 expected_output=template.get("expected_output", ""),
-                sample_tables=template.get("sample_tables", []),
+                sample_tables=template.get("sample_tables") or [],
                 function_signature=template.get("function_signature", "def solve(*args):"),
                 constraints=template.get("constraints", ""),
                 time_limit=template.get("time_limit", 1),
@@ -1000,6 +1452,8 @@ def seed_sample_question() -> None:
                     existing_question.sql_schema = template.get("sql_schema")
                 if not existing_question.expected_output and template.get("expected_output"):
                     existing_question.expected_output = template.get("expected_output")
+                if existing_question.sample_tables is None:
+                    existing_question.sample_tables = []
                 if not existing_question.sample_tables and template.get("sample_tables"):
                     existing_question.sample_tables = template.get("sample_tables")
                 seeded_solutions = template.get("solutions", get_seed_solutions(template))

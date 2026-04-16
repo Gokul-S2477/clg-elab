@@ -31,7 +31,7 @@ const StudentLogin = () => {
       }
 
       const payload = await response.json();
-      saveUser(payload.user);
+      saveUser(payload.user, payload.access_token);
       navigate("/dashboard");
     } catch (requestError) {
       setError(requestError.message || "Unable to login right now");
@@ -58,11 +58,11 @@ const StudentLogin = () => {
           <div className="grid gap-4 md:grid-cols-3">
             <div className="rounded-3xl border border-white/20 bg-white/15 p-4 backdrop-blur">
               <p className="text-xs uppercase tracking-[0.3em] text-blue-100">Student ID</p>
-              <p className="mt-2 text-xl font-bold">gs9721</p>
+              <p className="mt-2 text-xl font-bold">gs9721 / aa1201</p>
             </div>
             <div className="rounded-3xl border border-white/20 bg-white/15 p-4 backdrop-blur">
               <p className="text-xs uppercase tracking-[0.3em] text-blue-100">Password</p>
-              <p className="mt-2 text-xl font-bold">gs9721</p>
+              <p className="mt-2 text-xl font-bold">gs9721 / aa1201</p>
             </div>
             <div className="rounded-3xl border border-white/20 bg-white/15 p-4 backdrop-blur">
               <p className="text-xs uppercase tracking-[0.3em] text-blue-100">Access</p>

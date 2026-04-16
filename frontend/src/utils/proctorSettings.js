@@ -1,13 +1,19 @@
+import { apiGet, apiPut } from "./api";
+
 const PROCTOR_SETTINGS_KEY = "practice-proctor-settings";
 
 export const DEFAULT_PROCTOR_SETTINGS = {
   copyPasteLocked: true,
   extensionGuardEnabled: true,
   blurOnFocusLoss: true,
-  requireFullscreen: false,
+  requireFullscreen: true,
   disableStudentNotes: false,
   watermarkEnabled: true,
   blockQuestionSelection: true,
+  examCameraRequired: true,
+  examMicrophoneRequired: true,
+  fullscreenRecoverySeconds: 10,
+  maxFullscreenViolationsBeforeLogout: 1,
 };
 
 export const getProctorSettings = () => {
@@ -21,6 +27,16 @@ export const getProctorSettings = () => {
   } catch {
     return DEFAULT_PROCTOR_SETTINGS;
   }
+};
+
+export const fetchProctorSettingsFromApi = async () => {
+  const payload = await apiGet('/app/preferences/proctor');
+  return { ...DEFAULT_PROCTOR_SETTINGS, ...(payload?.data || {}) };
+};
+
+export const saveProctorSettingsToApi = async (nextSettings) => {
+  const payload = await apiPut('/app/preferences/proctor', nextSettings);
+  return { ...DEFAULT_PROCTOR_SETTINGS, ...(payload?.data || {}) };
 };
 
 export const saveProctorSettings = (nextSettings) => {

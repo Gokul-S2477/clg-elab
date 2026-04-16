@@ -1,3 +1,5 @@
+import { apiGet, apiPut } from "./api";
+
 const RESUME_SETTINGS_KEY = "resume-builder-settings";
 
 const DEFAULT_RESUME_SETTINGS = {
@@ -13,6 +15,16 @@ export const getResumeSettings = () => {
     console.error("Failed to parse resume settings", error);
     return DEFAULT_RESUME_SETTINGS;
   }
+};
+
+export const fetchResumeSettingsFromApi = async () => {
+  const payload = await apiGet('/app/preferences/resume');
+  return { ...DEFAULT_RESUME_SETTINGS, ...(payload?.data || {}) };
+};
+
+export const saveResumeSettingsToApi = async (settings) => {
+  const payload = await apiPut('/app/preferences/resume', settings);
+  return { ...DEFAULT_RESUME_SETTINGS, ...(payload?.data || {}) };
 };
 
 export const saveResumeSettings = (settings) => {

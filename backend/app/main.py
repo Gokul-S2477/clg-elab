@@ -2,9 +2,12 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.db import reset_database
 from app.routes.auth import router as auth_router
+from app.routes.app_persistence import router as app_persistence_router
+from app.routes.exam_portal import router as exam_portal_router
 from app.routes.playground import router as playground_router
 from app.routes.practice_arena import router as practice_arena_router
 
@@ -30,8 +33,14 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(app_persistence_router)
+app.include_router(exam_portal_router)
 app.include_router(practice_arena_router)
 app.include_router(playground_router)
+
+MEDIA_ROOT = os.path.join(os.path.dirname(__file__), "..", "media")
+os.makedirs(MEDIA_ROOT, exist_ok=True)
+app.mount("/media", StaticFiles(directory=MEDIA_ROOT), name="media")
 
 
 @app.get("/health")

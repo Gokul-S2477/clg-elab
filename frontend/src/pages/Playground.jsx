@@ -1,4 +1,5 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 import { API_BASE } from "../utils/api";
 import { getStoredUser } from "../utils/roleHelper";
@@ -330,10 +331,12 @@ const formatSavedAt = (value) => {
 };
 
 const Playground = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const currentUser = getStoredUser();
   const currentUserId = currentUser?.id || 1;
   const [playgroundSettings, setPlaygroundSettings] = useState(() => getPlaygroundSettings());
-  const [activeModule, setActiveModule] = useState("compiler");
+  const requestedModule = searchParams.get("module");
+  const [activeModule, setActiveModule] = useState(() => (BASE_MODULES.some((module) => module.id === requestedModule) ? requestedModule : "compiler"));
   const [capabilities, setCapabilities] = useState(DEFAULT_CAPABILITIES);
   const [language, setLanguage] = useState("python");
   const [compilerFiles, setCompilerFiles] = useState([{ name: "main.py", content: "" }]);
@@ -566,6 +569,21 @@ const Playground = () => {
     () => (sqlTotalRows > 0 ? Math.floor(sqlRowOffset / sqlRowLimit) + 1 : 0),
     [sqlRowLimit, sqlRowOffset, sqlTotalRows]
   );
+
+  useEffect(() => {
+    const nextRequestedModule = searchParams.get("module");
+    if (nextRequestedModule && BASE_MODULES.some((module) => module.id === nextRequestedModule) && nextRequestedModule !== activeModule) {
+      setActiveModule(nextRequestedModule);
+    }
+  }, [activeModule, searchParams]);
+
+  useEffect(() => {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set("module", activeModule);
+      return next;
+    }, { replace: true });
+  }, [activeModule, setSearchParams]);
 
   useEffect(() => {
     if (modules.some((module) => module.id === activeModule)) return;

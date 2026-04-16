@@ -14,8 +14,17 @@ export const getStoredUser = () => {
   }
 };
 
-export const saveUser = (user) => {
+export const saveUser = (user, accessToken = null) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+  if (accessToken) {
+    localStorage.setItem("access_token", accessToken);
+  }
+  window.dispatchEvent(new CustomEvent("user-updated", { detail: user }));
+};
+
+export const getAccessToken = () => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("access_token");
 };
 
 export const isPrivilegedRole = (role) => PRIVILEGED_ROLES.includes(role);

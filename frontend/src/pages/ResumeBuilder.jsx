@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import html2pdf from "html2pdf.js";
 import { useNavigate } from "react-router-dom";
 import { RESUME_TEMPLATES, getResumeTemplateById } from "../data/resumeTemplates";
 import { analyzeResumeAgainstJob } from "../utils/atsChecker";
@@ -720,27 +719,29 @@ const ResumeBuilder = () => {
     const target = previewExportRef.current || resumeExportRef.current;
     if (!target) return;
     const filename = `${(draftResume?.name || "resume").replace(/\s+/g, "-").toLowerCase()}.pdf`;
-    html2pdf()
-      .set({
-        margin: [8, 8, 8, 8],
-        filename,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: "#ffffff",
-        },
-        jsPDF: {
-          unit: "mm",
-          format: "a4",
-          orientation: "portrait",
-        },
-        pagebreak: {
-          mode: ["css", "legacy"],
-        },
-      })
-      .from(target)
-      .save();
+    import("html2pdf.js").then(({ default: html2pdf }) => {
+      html2pdf()
+        .set({
+          margin: [8, 8, 8, 8],
+          filename,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: "#ffffff",
+          },
+          jsPDF: {
+            unit: "mm",
+            format: "a4",
+            orientation: "portrait",
+          },
+          pagebreak: {
+            mode: ["css", "legacy"],
+          },
+        })
+        .from(target)
+        .save();
+    });
   };
 
   const activeAdvancedStyle = { ...createDefaultAdvancedStyle(), ...(draftResume?.advancedStyle || {}) };

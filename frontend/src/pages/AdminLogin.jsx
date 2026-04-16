@@ -38,7 +38,7 @@ const AdminLogin = () => {
       }
 
       const payload = await response.json();
-      saveUser(payload.user);
+      saveUser(payload.user, payload.access_token);
       navigate("/dashboard");
     } catch (requestError) {
       setError(requestError.message || "Unable to login right now");

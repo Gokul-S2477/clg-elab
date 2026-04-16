@@ -15,14 +15,13 @@ const StudyHome = () => {
     <div className="space-y-8">
       <section className="erp-card rounded-[32px] bg-white px-6 py-8 md:px-8">
         <p className="text-sm font-semibold uppercase tracking-[0.4em] text-blue-600">Study Modules</p>
-        <h1 className="mt-3 text-4xl font-extrabold text-slate-900">Learn SQL topic by topic.</h1>
+        <h1 className="mt-3 text-4xl font-extrabold text-slate-900">Learning modules by subject.</h1>
         <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-500">
-          Open the SQL study module as a full document-style tutorial with the original Word-file content preserved,
-          organized into a sidebar topic reader for quick navigation.
+          Open a subject module directly from here. SQL is fully structured already, and Python now has its own separate learning space ready for topics and subtopics later.
         </p>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+      <section className="grid gap-6 xl:grid-cols-2">
         <button
           type="button"
           onClick={() => navigate("/study/sql")}
@@ -60,8 +59,49 @@ const StudyHome = () => {
           </div>
         </button>
 
+        <button
+          type="button"
+          onClick={() => navigate("/study/python")}
+          className="group relative overflow-hidden rounded-[32px] border border-blue-100 bg-white text-left shadow-[0_20px_50px_rgba(15,91,216,0.12)] transition-transform duration-200 hover:-translate-y-1"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-400 via-sky-400 to-cyan-500 opacity-95" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.35),transparent_32%)]" />
+          <div className="relative flex min-h-[360px] flex-col justify-between p-8">
+            <div>
+              <p className="text-sm font-semibold text-white/85">Standalone Learning Module</p>
+              <h2 className="mt-3 max-w-md text-5xl font-extrabold leading-tight text-white">Python</h2>
+              <p className="mt-4 max-w-md text-sm leading-7 text-white/85">
+                A separate learning module space for Python. We can build the topic tree, examples, visuals, and practice later without mixing it into SQL.
+              </p>
+            </div>
+
+            <div className="mt-8 flex items-end justify-between gap-4">
+              <div className="grid grid-cols-3 gap-6 rounded-[24px] bg-white/92 px-6 py-5 text-slate-900 backdrop-blur">
+                <div>
+                  <p className="text-3xl font-extrabold">1</p>
+                  <p className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Module</p>
+                </div>
+                <div>
+                  <p className="text-3xl font-extrabold">0</p>
+                  <p className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Topics</p>
+                </div>
+                <div>
+                  <p className="text-3xl font-extrabold">Ready</p>
+                  <p className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Status</p>
+                </div>
+              </div>
+
+              <div className="flex h-20 w-20 items-center justify-center rounded-full border-8 border-white/80 bg-white text-3xl font-bold text-blue-600 shadow-lg transition-transform duration-200 group-hover:scale-105">
+                &gt;
+              </div>
+            </div>
+          </div>
+        </button>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="erp-card rounded-[32px] bg-white p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-blue-600">What You Get</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-blue-600">What You Get In SQL</p>
           <div className="mt-5 space-y-4">
             {[
               "Structured module sidebar with all SQL topics",
@@ -75,7 +115,10 @@ const StudyHome = () => {
               </div>
             ))}
           </div>
+        </div>
 
+        <div className="erp-card rounded-[32px] bg-white p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-blue-600">Continue SQL</p>
           <div className="mt-6 rounded-[24px] border border-slate-200 bg-slate-50 px-5 py-4">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Continue Previous</p>
             <p className="mt-2 text-lg font-bold text-slate-900">
@@ -88,7 +131,7 @@ const StudyHome = () => {
               onClick={() => navigate(`/study/sql?topic=${progress.lastTopicId || SQL_STUDY_COURSE.topics[0].id}`)}
               className="mt-4 rounded-full bg-[#0F5BD8] px-5 py-2 text-sm font-semibold text-white"
             >
-              Open Course
+              Open SQL Course
             </button>
           </div>
         </div>

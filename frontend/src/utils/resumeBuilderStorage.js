@@ -232,6 +232,7 @@ export const readResumeWorkspace = (userId = "guest") => {
 export const saveResumeWorkspace = (userId = "guest", workspace) => {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(buildStorageKey(userId), JSON.stringify(workspace));
+  window.dispatchEvent(new CustomEvent("resume-workspace-updated", { detail: { userId, workspace } }));
 };
 
 export const MAX_RESUMES_PER_USER = 3;

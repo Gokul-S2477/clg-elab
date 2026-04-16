@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Depends, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 from slugify import slugify
 
@@ -213,6 +213,11 @@ class QuestionDetailResponse(BaseModel):
     test_cases: List[TestCaseResponse]
     starter_codes: List[StarterCodeResponse]
     solutions: List[SolutionResponse]
+
+    @field_validator("tags", "sample_tables", "examples", "test_cases", "starter_codes", "solutions", mode="before")
+    @classmethod
+    def _ensure_lists(cls, value):
+        return value or []
 
     class Config:
         from_attributes = True
