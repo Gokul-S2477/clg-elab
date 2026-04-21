@@ -40,6 +40,7 @@ class Department(Base):
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String(50), nullable=False, unique=True, index=True)
     name = Column(String(255), nullable=False)
+    description = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

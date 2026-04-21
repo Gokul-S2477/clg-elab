@@ -1,4 +1,7 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +13,10 @@ from app.routes.app_persistence import router as app_persistence_router
 from app.routes.exam_portal import router as exam_portal_router
 from app.routes.playground import router as playground_router
 from app.routes.practice_arena import router as practice_arena_router
+from app.routes.ask_sb import router as ask_sb_router
+from app.routes.user_management import router as user_management_router
+from app.routes.campus import router as campus_router
+from app.routes.grading import router as grading_router
 
 
 app = FastAPI(title="ERP Backend")
@@ -37,6 +44,10 @@ app.include_router(app_persistence_router)
 app.include_router(exam_portal_router)
 app.include_router(practice_arena_router)
 app.include_router(playground_router)
+app.include_router(ask_sb_router)
+app.include_router(user_management_router)
+app.include_router(campus_router)
+app.include_router(grading_router)
 
 MEDIA_ROOT = os.path.join(os.path.dirname(__file__), "..", "media")
 os.makedirs(MEDIA_ROOT, exist_ok=True)

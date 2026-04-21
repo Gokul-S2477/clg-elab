@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -38,8 +38,8 @@ body {
     radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 18rem),
     linear-gradient(180deg, #fbfdff 0%, #f3f8ff 48%, #edf4ff 100%);
   color: var(--erp-text);
-  font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
-  letter-spacing: 0.01em;
+  font-family: "Plus Jakarta Sans", "Outfit", "Segoe UI", sans-serif;
+  letter-spacing: -0.01em;
   line-height: 1.5;
   overflow-x: hidden;
 }
@@ -152,6 +152,27 @@ code {
     box-shadow: 0 0 0 8px rgba(45, 212, 191, 0.08);
   }
 }
+ 
+.erp-glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+}
+
+.erp-glass-dark {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.erp-text-gradient {
+  background: linear-gradient(135deg, #2563eb 0%, #0f766e 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 
 
 .erp-card:hover {
@@ -184,4 +205,9 @@ select:focus,
 textarea:focus {
   border-color: rgba(37, 99, 235, 0.4) !important;
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+}
+
+@keyframes progress-shine {
+  from { background-position: 0 0; }
+  to { background-position: 40px 0; }
 }

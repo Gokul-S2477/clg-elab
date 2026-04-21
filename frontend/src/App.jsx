@@ -24,6 +24,12 @@ const PracticeArena = lazy(() => import("./pages/PracticeArena"));
 const PracticeArenaAdmin = lazy(() => import("./pages/PracticeArenaAdmin"));
 const ContentStudio = lazy(() => import("./pages/ContentStudio"));
 const SystemSettings = lazy(() => import("./pages/SystemSettings"));
+const AskSB = lazy(() => import("./pages/AskSB"));
+const UserManagement = lazy(() => import("./pages/UserManagement"));
+const Announcements = lazy(() => import("./pages/Announcements"));
+const ResourceHub = lazy(() => import("./pages/ResourceHub"));
+const Portfolio = lazy(() => import("./pages/Portfolio"));
+const Assignments = lazy(() => import("./pages/Assignments"));
 
 const withLoader = (node, label) => <Suspense fallback={<PageLoader label={label} />}>{node}</Suspense>;
 
@@ -53,6 +59,12 @@ const App = () => (
         <Route path="/practice-arena-admin" element={<ProtectedRoute>{withLoader(<PracticeArenaAdmin />, "Loading practice controls...")}</ProtectedRoute>} />
         <Route path="/content-studio" element={<ProtectedRoute>{withLoader(<ContentStudio />, "Loading content studio...")}</ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute>{withLoader(<SystemSettings />, "Loading system settings...")}</ProtectedRoute>} />
+        <Route path="/ask-sb" element={<ProtectedRoute>{withLoader(<AskSB />, "Loading Ask SB...")}</ProtectedRoute>} />
+        <Route path="/user-management" element={<ProtectedRoute allowedRoles={["admin", "super_admin", "faculty"]}>{withLoader(<UserManagement />, "Loading user management...")}</ProtectedRoute>} />
+        <Route path="/announcements" element={<ProtectedRoute allowedRoles={["student", "faculty", "admin", "super_admin"]}>{withLoader(<Announcements />, "Loading announcements...")}</ProtectedRoute>} />
+        <Route path="/resource-hub" element={<ProtectedRoute allowedRoles={["student", "faculty", "admin", "super_admin"]}>{withLoader(<ResourceHub />, "Loading resource hub...")}</ProtectedRoute>} />
+        <Route path="/assignments" element={<ProtectedRoute allowedRoles={["student"]}>{withLoader(<Assignments />, "Loading assignments...")}</ProtectedRoute>} />
+        <Route path="/portfolio/:studentId" element={<ProtectedRoute>{withLoader(<Portfolio />, "Loading portfolio...")}</ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>

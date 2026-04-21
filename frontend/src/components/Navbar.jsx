@@ -36,6 +36,7 @@ const NAV_ITEMS = [
       { to: "/playground?module=notebook", label: "Notebook Lab", hint: "Open the notebook workspace directly" },
     ],
   },
+  { to: "/ask-sb", label: "Ask SB" },
 ];
 
 const shellLogo = (
@@ -246,6 +247,16 @@ const Navbar = () => {
                   ].join(" ")}
                 >
                   Content
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goTo("/user-management")}
+                  className={[
+                    "inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] transition",
+                    location.pathname === "/user-management" ? "bg-[#0847ab] text-white shadow-sm" : "bg-white/10 text-white hover:bg-white/14",
+                  ].join(" ")}
+                >
+                  Users
                 </button>
               </>
             )}

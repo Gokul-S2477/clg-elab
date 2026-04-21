@@ -89,10 +89,25 @@ def ensure_schema_upgrades() -> None:
         if "updated_at" not in playground_columns:
             connection.execute(text("ALTER TABLE playground_saves ADD COLUMN updated_at DATETIME"))
 
+    # AskSB Upgrades
+    if "ask_sb_projects" in inspector.get_table_names():
+        project_columns = {column["name"] for column in inspector.get_columns("ask_sb_projects")}
+        with engine.begin() as connection:
+            if "department_id" not in project_columns:
+                connection.execute(text("ALTER TABLE ask_sb_projects ADD COLUMN department_id INTEGER REFERENCES departments(id)"))
+            if "class_id" not in project_columns:
+                connection.execute(text("ALTER TABLE ask_sb_projects ADD COLUMN class_id INTEGER REFERENCES class_rooms(id)"))
+
+    if "ask_sb_chats" in inspector.get_table_names():
+        chat_columns = {column["name"] for column in inspector.get_columns("ask_sb_chats")}
+        if "user_id" not in chat_columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE ask_sb_chats ADD COLUMN user_id INTEGER REFERENCES users(id)"))
+
 
 def reset_database(drop_existing: bool = False) -> None:
     """Drop and recreate tables while handling Postgres and MySQL safely."""
-    from app.models import exam_portal, practice_arena, user  # noqa: F401
+    from app.models import ask_sb, exam_portal, practice_arena, user  # noqa: F401
 
     if drop_existing:
         low_url = ACTIVE_DATABASE_URL.lower()
@@ -224,12 +239,52 @@ def seed_default_users() -> None:
                 session.add(existing)
                 session.flush()
 
+            profile_data = user["profile"]
+            
+            # Try to link to a department ID if it exists in the database
+            dept_id = None
+            if "department" in profile_data:
+                dept_name = profile_data["department"]
+                from app.models.exam_portal import Department
+                # Look for department by code or name
+                dept = session.query(Department).filter(
+                    (Department.code == dept_name) | (Department.name == dept_name)
+                ).first()
+                if dept:
+                    dept_id = dept.id
+
             profile = session.query(UserProfile).filter(UserProfile.user_id == user["id"]).first()
             if profile:
-                profile.data = user["profile"]
+                profile.data = profile_data
+                profile.department_id = dept_id
             else:
-                session.add(UserProfile(user_id=user["id"], data=user["profile"]))
+                session.add(UserProfile(
+                    user_id=user["id"], 
+                    data=profile_data,
+                    department_id=dept_id,
+                    year=int(profile_data.get("year", 0)) if str(profile_data.get("year")).isdigit() else None
+                ))
         session.commit()
+
+        # Seed New Features
+        try:
+            from app.models.campus import Announcement, Resource
+            from app.models.submission import Assignment
+
+            if session.query(Announcement).count() == 0:
+                session.add(Announcement(title="Welcome to Elab Pro", content="Explore the new AI features and resource hub on your dashboard.", created_by=3))
+                session.add(Announcement(title="Mid-Term Submission", content="Please submit your lab records by Friday for AI review.", target_role="student", created_by=3))
+                
+            if session.query(Resource).count() == 0:
+                session.add(Resource(title="Python Lab Manual", description="Full guide for Python programming labs.", file_path="https://example.com/python.pdf", dept_id=1, uploaded_by=3))
+                
+            if session.query(Assignment).count() == 0:
+                session.add(Assignment(title="Intro to Python", description="Write a program to solve a basic logic problem.", instructions="Include comments and proper variable naming.", created_by=3))
+            
+            session.commit()
+        except Exception as e:
+            print(f"Feature seeding error: {e}")
+            session.rollback()
     finally:
         session.close()
 
@@ -1564,4 +1619,3 @@ def seed_sample_question() -> None:
         session.close()
 
 
-reset_database(drop_existing=False)

@@ -1,1 +1,0 @@
-import{j as e}from"./index-Dm7c8FQJ.js";let n=null,o=0,t=null;const s=20*1e3,u=async({force:l=!1}={})=>{const r=Date.now();return!l&&n&&r-o<s?n:(!l&&t||(t=e("/portal/bootstrap").then(a=>(n=a,o=Date.now(),a)).finally(()=>{t=null})),t)},c=()=>{n=null,o=0,t=null};export{u as g,c as i};
