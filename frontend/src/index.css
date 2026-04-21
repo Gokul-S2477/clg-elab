@@ -20,6 +20,41 @@
   --erp-danger: #dc2626;
   --erp-shadow: 0 18px 40px rgba(37, 99, 235, 0.09);
   --erp-shadow-soft: 0 10px 24px rgba(15, 23, 42, 0.05);
+  --erp-gradient-1: #2563eb;
+  --erp-gradient-2: #0f766e;
+}
+
+/* Theme Classes */
+:root.theme-purple {
+  --erp-primary: #7c3aed;
+  --erp-primary-soft: #f5f3ff;
+  --erp-gradient-1: #7c3aed;
+  --erp-gradient-2: #c026d3;
+  --erp-shadow: 0 18px 40px rgba(124, 58, 237, 0.09);
+}
+
+:root.theme-green {
+  --erp-primary: #059669;
+  --erp-primary-soft: #ecfdf5;
+  --erp-gradient-1: #059669;
+  --erp-gradient-2: #0891b2;
+  --erp-shadow: 0 18px 40px rgba(5, 150, 105, 0.09);
+}
+
+:root.theme-rose {
+  --erp-primary: #e11d48;
+  --erp-primary-soft: #fff1f2;
+  --erp-gradient-1: #e11d48;
+  --erp-gradient-2: #be123c;
+  --erp-shadow: 0 18px 40px rgba(225, 29, 72, 0.09);
+}
+
+:root.theme-amber {
+  --erp-primary: #d97706;
+  --erp-primary-soft: #fffbeb;
+  --erp-gradient-1: #d97706;
+  --erp-gradient-2: #b45309;
+  --erp-shadow: 0 18px 40px rgba(217, 119, 6, 0.09);
 }
 
 * {
@@ -169,7 +204,7 @@ code {
 }
 
 .erp-text-gradient {
-  background: linear-gradient(135deg, #2563eb 0%, #0f766e 100%);
+  background: linear-gradient(135deg, var(--erp-gradient-1) 0%, var(--erp-gradient-2) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }

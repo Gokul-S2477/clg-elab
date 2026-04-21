@@ -37,6 +37,7 @@ const NAV_ITEMS = [
     ],
   },
   { to: "/ask-sb", label: "Ask SB" },
+  { to: "/announcements", label: "Alerts" },
 ];
 
 const shellLogo = (
@@ -354,6 +355,14 @@ const Navbar = () => {
                     >
                       <span className="text-[#0F5BD8]">{userIcon}</span>
                       <span>Profile</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => goTo("/settings")}
+                      className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-blue-100 hover:bg-blue-50 hover:text-blue-700"
+                    >
+                      <span className="text-[#0F5BD8]"><svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none"><path d="M12 15.5A3.5 3.5 0 1 0 12 8.5A3.5 3.5 0 1 0 12 15.5Z" stroke="currentColor" strokeWidth="2" /><path d="M19.4 15A1.7 1.7 0 0 0 20 13.4V10.6A1.7 1.7 0 0 0 19.4 9L17.9 8.2L17.5 6.5A1.7 1.7 0 0 0 15.8 5.2L14.1 4.8L13.3 3.3A1.7 1.7 0 0 0 10.7 3.3L9.9 4.8L8.2 5.2A1.7 1.7 0 0 0 6.5 6.5L6.1 8.2L4.6 9A1.7 1.7 0 0 0 4 10.6V13.4A1.7 1.7 0 0 0 4.6 15L6.1 15.8L6.5 17.5A1.7 1.7 0 0 0 8.2 18.8L9.9 19.2L10.7 20.7A1.7 1.7 0 0 0 13.3 20.7L14.1 19.2L15.8 18.8A1.7 1.7 0 0 0 17.5 17.5L17.9 15.8L19.4 15Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
+                      <span>Settings</span>
                     </button>
                     <button
                       type="button"

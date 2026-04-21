@@ -55,9 +55,14 @@ const navIcon = (name) => {
 
 const Sidebar = ({ collapsed = false }) => {
   const user = getStoredUser();
-  const links = isPrivilegedRole(user?.role)
-    ? [...navLinks, { to: "/exam-management", label: "Exam Management", icon: "content" }, { to: "/content-studio", label: "Content Studio", icon: "content" }, { to: "/settings", label: "Main Settings", icon: "settings" }]
-    : navLinks;
+  const links = [
+    ...navLinks,
+    ...(isPrivilegedRole(user?.role) ? [
+      { to: "/exam-management", label: "Exam Management", icon: "content" },
+      { to: "/content-studio", label: "Content Studio", icon: "content" },
+    ] : []),
+    { to: "/settings", label: "Settings", icon: "settings" }
+  ];
 
   return (
     <aside className={`fixed left-0 top-0 z-20 hidden h-screen border-r border-[#d8e6ff] bg-white/88 py-6 backdrop-blur xl:block ${collapsed ? "w-20 px-2" : "w-72 px-5"}`}>

@@ -8,16 +8,39 @@ const Announcements = () => {
   const currentUser = getStoredUser();
   const [announcements, setAnnouncements] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [newAlert, setNewAlert] = useState({ title: "", content: "", target_role: "all" });
+  const [newAlert, setNewAlert] = useState({ 
+    title: "", 
+    content: "", 
+    target_role: "all",
+    target_roles: [], 
+    target_depts: [], 
+    target_classes: [] 
+  });
   const [loading, setLoading] = useState(true);
+  const [departments, setDepartments] = useState([]);
+  const [classes, setClasses] = useState([]);
 
   useEffect(() => {
     fetchAnnouncements();
+    fetchMetadata();
   }, []);
+
+  const fetchMetadata = async () => {
+    try {
+      const [dRes, cRes] = await Promise.all([
+        axios.get("http://localhost:8000/user-management/departments"),
+        axios.get("http://localhost:8000/user-management/class-rooms")
+      ]);
+      setDepartments(dRes.data);
+      setClasses(cRes.data);
+    } catch (err) {
+      console.error("Failed to fetch metadata");
+    }
+  };
 
   const fetchAnnouncements = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/announcements?role=${currentUser.role}`);
+      const res = await axios.get(`${API_BASE}/announcements?user_id=${currentUser.id}`);
       setAnnouncements(res.data);
     } catch (err) {
       console.error("Failed to fetch announcements");
@@ -29,13 +52,26 @@ const Announcements = () => {
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${API_BASE}/announcements?user_id=${currentUser.id}`, newAlert);
+      const payload = {
+        ...newAlert,
+        target_roles: newAlert.target_roles.join(","),
+        target_depts: newAlert.target_depts.join(","),
+        target_classes: newAlert.target_classes.join(",")
+      };
+      await axios.post(`${API_BASE}/announcements?user_id=${currentUser.id}`, payload);
       setShowModal(false);
-      setNewAlert({ title: "", content: "", target_role: "all" });
+      setNewAlert({ 
+        title: "", content: "", target_role: "all", 
+        target_roles: [], target_depts: [], target_classes: [] 
+      });
       fetchAnnouncements();
     } catch (err) {
       alert("Failed to post announcement");
     }
+  };
+
+  const toggleItem = (list, item) => {
+    return list.includes(item) ? list.filter(i => i !== item) : [...list, item];
   };
 
   return (
@@ -66,9 +102,14 @@ const Announcements = () => {
             {announcements.map(alert => (
               <div key={alert.id} className="erp-card p-8 rounded-[2.5rem] shadow-sm hover:shadow-md transition-all erp-rise-in">
                 <div className="flex items-center justify-between mb-4">
-                  <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${alert.target_role === 'all' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-orange-50 text-orange-700 border-orange-100'}`}>
-                    {alert.target_role === 'all' ? 'Universal' : alert.target_role}
-                  </span>
+                  <div className="flex gap-2">
+                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${alert.target_role === 'all' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-orange-50 text-orange-700 border-orange-100'}`}>
+                      {alert.target_role === 'all' ? 'Universal' : alert.target_role}
+                    </span>
+                    {alert.target_roles && alert.target_roles.split(',').map(r => (
+                       <span key={r} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-[9px] font-black uppercase border border-slate-200">{r}</span>
+                    ))}
+                  </div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                     {new Date(alert.created_at).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
                   </p>
@@ -87,10 +128,10 @@ const Announcements = () => {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 erp-fade-in">
-          <form onSubmit={handleCreate} className="erp-card rounded-[3.5rem] p-10 w-full max-w-lg shadow-2xl erp-rise-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 erp-fade-in overflow-y-auto">
+          <form onSubmit={handleCreate} className="erp-card rounded-[3.5rem] p-10 w-full max-w-2xl shadow-2xl erp-rise-in my-10">
             <h3 className="text-2xl font-black text-slate-900 mb-8">Post Announcement</h3>
-            <div className="space-y-6">
+            <div className="space-y-8">
               <div>
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block px-1">Alert Title</label>
                 <input required placeholder="e.g. End Semester Exam Schedule" value={newAlert.title} onChange={e => setNewAlert({...newAlert, title: e.target.value})} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 font-bold text-slate-900" />
@@ -99,13 +140,55 @@ const Announcements = () => {
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block px-1">Content</label>
                 <textarea required placeholder="Detailed message..." value={newAlert.content} onChange={e => setNewAlert({...newAlert, content: e.target.value})} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 font-bold text-slate-900 h-32" />
               </div>
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block px-1">Target Audience</label>
-                <select value={newAlert.target_role} onChange={e => setNewAlert({...newAlert, target_role: e.target.value})} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 font-bold text-slate-900">
-                  <option value="all">Everyone</option>
-                  <option value="student">Students Only</option>
-                  <option value="faculty">Faculty Only</option>
-                </select>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 block px-1">Target Roles</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['admin', 'faculty', 'student'].map(role => (
+                      <button 
+                        key={role}
+                        type="button"
+                        onClick={() => setNewAlert({...newAlert, target_roles: toggleItem(newAlert.target_roles, role)})}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${newAlert.target_roles.includes(role) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200'}`}
+                      >
+                        {role}s
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 block px-1">Specific Departments</label>
+                   <div className="max-h-32 overflow-y-auto space-y-2 erp-scrollbar pr-2">
+                      {departments.map(dept => (
+                        <div key={dept.id} className="flex items-center gap-3">
+                           <input 
+                             type="checkbox" 
+                             checked={newAlert.target_depts.includes(dept.id.toString())}
+                             onChange={() => setNewAlert({...newAlert, target_depts: toggleItem(newAlert.target_depts, dept.id.toString())})}
+                           />
+                           <span className="text-xs font-bold text-slate-600">{dept.name}</span>
+                        </div>
+                      ))}
+                   </div>
+                </div>
+
+                <div className="md:col-span-2">
+                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 block px-1">Specific Classes</label>
+                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-40 overflow-y-auto erp-scrollbar pr-2">
+                      {classes.map(cls => (
+                        <div key={cls.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                           <input 
+                             type="checkbox" 
+                             checked={newAlert.target_classes.includes(cls.id.toString())}
+                             onChange={() => setNewAlert({...newAlert, target_classes: toggleItem(newAlert.target_classes, cls.id.toString())})}
+                           />
+                           <span className="text-[10px] font-black text-slate-700 truncate">{cls.name}</span>
+                        </div>
+                      ))}
+                   </div>
+                </div>
               </div>
             </div>
             <div className="flex gap-4 mt-12">

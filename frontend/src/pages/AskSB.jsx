@@ -92,6 +92,7 @@ const AskSB = () => {
   const [midWidth, setMidWidth] = useState(500);
   const [isResizingLeft, setIsResizingLeft] = useState(false);
   const [isResizingMid, setIsResizingMid] = useState(false);
+  const [isRightPanelVisible, setIsRightPanelVisible] = useState(true);
   
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -483,9 +484,26 @@ const AskSB = () => {
         />
 
         {/* Panel 2: Chat */}
-        <div style={{ width: midWidth }} className="flex flex-col flex-shrink-0 bg-[#1e293b] rounded-[2.5rem] border border-slate-800 overflow-hidden relative">
+        <div 
+          style={{ 
+            width: isRightPanelVisible ? midWidth : 'auto', 
+            flex: isRightPanelVisible ? 'none' : '1' 
+          }} 
+          className="flex flex-col flex-shrink-0 bg-[#1e293b] rounded-[2.5rem] border border-slate-800 overflow-hidden relative transition-all duration-300"
+        >
            <div className="p-6 border-b border-slate-800 flex items-center justify-between">
-              <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">AI Dialogue</h3>
+              <div className="flex items-center gap-4">
+                 <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">AI Dialogue</h3>
+                 {!isRightPanelVisible && (
+                   <button 
+                     onClick={() => setIsRightPanelVisible(true)}
+                     className="px-3 py-1 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center gap-2"
+                   >
+                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 19l-7-7 7-7m8 14l-7-7 7-7" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                     Show Mindmap
+                   </button>
+                 )}
+              </div>
               <div className="flex items-center gap-2">
                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                  <span className="text-[10px] font-bold text-slate-500">Gemini 1.5 Flash</span>
@@ -522,42 +540,55 @@ const AskSB = () => {
         </div>
 
         {/* Divider 2 */}
-        <div 
-          onMouseDown={startResizingMid}
-          className={`w-1 cursor-col-resize hover:bg-blue-500 transition-colors ${isResizingMid ? 'bg-blue-600 w-1' : 'bg-slate-800'}`} 
-        />
+        {isRightPanelVisible && (
+          <div 
+            onMouseDown={startResizingMid}
+            className={`w-1 cursor-col-resize hover:bg-blue-500 transition-colors ${isResizingMid ? 'bg-blue-600 w-1' : 'bg-slate-800'}`} 
+          />
+        )}
 
         {/* Panel 3: Mindmap / Quiz */}
-        <div className="flex-1 bg-[#1e293b] rounded-[2.5rem] border border-slate-800 overflow-hidden flex flex-col relative">
-           <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-[#1e293b]/50">
-              <div className="flex gap-4">
-                 {['mindmap', 'quiz'].map(tab => (
-                   <button 
-                     key={tab} 
-                     onClick={() => {
-                        setActiveTab(tab);
-                        if (tab === 'mindmap' && !mindmapData) fetchMindmap();
-                        if (tab === 'quiz' && quizData.length === 0) fetchQuiz();
-                     }}
-                     className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all ${activeTab === tab ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
-                   >
-                     {tab}
-                   </button>
-                 ))}
-              </div>
-              <button
-                onClick={() => {
-                  if (!document.fullscreenElement) {
-                    mindmapContainerRef.current?.requestFullscreen();
-                  } else {
-                    document.exitFullscreen();
-                  }
-                }}
-                className="p-2 hover:bg-slate-800 rounded-xl transition-colors text-slate-500 hover:text-white"
-              >
-                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </button>
-           </div>
+        {isRightPanelVisible && (
+          <div className="flex-1 bg-[#1e293b] rounded-[2.5rem] border border-slate-800 overflow-hidden flex flex-col relative erp-fade-in">
+             <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-[#1e293b]/50">
+                <div className="flex gap-4">
+                   {['mindmap', 'quiz'].map(tab => (
+                     <button 
+                       key={tab} 
+                       onClick={() => {
+                          setActiveTab(tab);
+                          if (tab === 'mindmap' && !mindmapData) fetchMindmap();
+                          if (tab === 'quiz' && quizData.length === 0) fetchQuiz();
+                       }}
+                       className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all ${activeTab === tab ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                     >
+                       {tab}
+                     </button>
+                   ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (!document.fullscreenElement) {
+                        mindmapContainerRef.current?.requestFullscreen();
+                      } else {
+                        document.exitFullscreen();
+                      }
+                    }}
+                    className="p-2 hover:bg-slate-800 rounded-xl transition-colors text-slate-500 hover:text-white"
+                    title="Fullscreen"
+                  >
+                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </button>
+                  <button
+                    onClick={() => setIsRightPanelVisible(false)}
+                    className="p-2 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-colors text-slate-500"
+                    title="Hide Panel"
+                  >
+                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 5l7 7-7 7M5 5l7 7-7 7" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </button>
+                </div>
+             </div>
 
            <div 
              ref={mindmapContainerRef}
@@ -620,6 +651,7 @@ const AskSB = () => {
               )}
            </div>
         </div>
+      )}
 
       </div>
 

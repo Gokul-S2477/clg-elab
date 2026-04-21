@@ -39,8 +39,10 @@ const Dashboard = () => {
     };
     
     const fetchRealAnnouncements = async () => {
+      const user = analytics.user || getStoredUser();
+      if (!user?.id) return;
       try {
-        const res = await axios.get("http://localhost:8000/campus/announcements?role=" + (analytics.user?.role || "student"));
+        const res = await axios.get(`http://localhost:8000/campus/announcements?user_id=${user.id}`);
         setRealAnnouncements(res.data.slice(0, 2));
       } catch (err) { console.error(err); }
     };
@@ -224,9 +226,10 @@ const Dashboard = () => {
             <h3 className="text-2xl font-black tracking-tight mb-6">Quick Access</h3>
             <div className="space-y-3">
               {[
+                { label: "Alert Hub", to: "/announcements", icon: Bell },
                 { label: "Exam Portal", to: "/exam-portal", icon: Calendar },
+                { label: "Resume Builder", to: "/dashboard/resume-builder", icon: Award },
                 { label: "Resource Hub", to: "/resource-hub", icon: BookOpen },
-                { label: "My Portfolio", to: `/portfolio/${analytics.user?.id}`, icon: Award },
                 { label: "Assignments", to: "/assignments", icon: PenTool },
               ].map((item) => (
                 <button 

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { API_BASE } from "../utils/api";
 import { saveUser } from "../utils/roleHelper";
 
@@ -48,97 +49,126 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-8">
-      <div className="grid w-full max-w-6xl overflow-hidden rounded-[36px] border border-[#d8e6ff] bg-white shadow-[0_30px_90px_rgba(37,99,235,0.14)] lg:grid-cols-[0.95fr,1.05fr]">
-        <section className="p-8 sm:p-10">
-          <div className="mx-auto max-w-md">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-teal-700">Admin Login</p>
-                <h2 className="mt-3 text-4xl font-extrabold text-slate-900">Management Access</h2>
-                <p className="mt-3 text-sm leading-7 text-slate-500">
-                  Sign in to create questions, edit hidden cases, and manage published content.
-                </p>
+    <div className="min-h-screen bg-[var(--erp-bg)] flex items-center justify-center p-6 relative overflow-hidden">
+      {/* Background Ambience */}
+      <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-400/10 rounded-full blur-[140px]" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-teal-400/10 rounded-full blur-[140px]" />
+      
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.8 }}
+        className="w-full max-w-6xl grid lg:grid-cols-[0.9fr,1.1fr] rounded-[3.5rem] overflow-hidden border border-indigo-100 bg-white/70 backdrop-blur-3xl shadow-[0_50px_120px_rgba(79,70,229,0.1)]"
+      >
+        {/* Left Side: Form */}
+        <div className="p-12 sm:p-20 order-2 lg:order-1 flex flex-col justify-center border-r border-indigo-50/50 bg-white/40">
+           <div className="w-full max-w-sm mx-auto">
+              <div className="flex items-center justify-between mb-12">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-600 mb-2">Management Hub</p>
+                  <h2 className="text-4xl font-black text-slate-900 tracking-tight">Admin Access</h2>
+                </div>
+                <Link to="/student-login" className="p-3 bg-blue-50 border border-blue-100 rounded-2xl text-blue-600 hover:bg-blue-600 hover:text-white transition-all active:scale-95 shadow-sm">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 14l9-5-9-5-9 5 9 5z" /><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /><path d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/></svg>
+                </Link>
               </div>
-              <Link className="rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700" to="/">
-                Student Login
-              </Link>
-            </div>
 
-            <form className="mt-10 space-y-5" onSubmit={handleSubmit}>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Role</label>
-                <select
-                  value={selectedRole}
-                  onChange={(event) => setSelectedRole(event.target.value)}
-                  className="w-full rounded-2xl border border-[#d8e6ff] bg-[#f9fbff] px-4 py-3 text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white"
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Administrative Role</label>
+                  <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-50 rounded-2xl border border-slate-100">
+                    {roles.map(role => (
+                      <button
+                        key={role.value}
+                        type="button"
+                        onClick={() => setSelectedRole(role.value)}
+                        className={`py-2 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all ${selectedRole === role.value ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'text-slate-400 hover:text-slate-600'}`}
+                      >
+                        {role.label.split(' ')[0]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Staff Identifier</label>
+                  <input
+                    type="text"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    className="w-full bg-slate-50 border border-blue-100 rounded-2xl px-6 py-4 text-slate-900 font-bold outline-none focus:ring-4 focus:ring-blue-50 transition-all placeholder:text-slate-300"
+                    placeholder="e.g. ADM001"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Master Password</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-slate-50 border border-blue-100 rounded-2xl px-6 py-4 text-slate-900 font-bold outline-none focus:ring-4 focus:ring-blue-50 transition-all placeholder:text-slate-300"
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+
+                {error && <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-[10px] font-black uppercase tracking-widest">{error}</div>}
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-100 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest text-[11px]"
                 >
-                  {roles.map((role) => (
-                    <option key={role.value} value={role.value}>
-                      {role.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  {isLoading ? "Synchronizing..." : "Initialize Dashboard"}
+                </button>
+              </form>
+           </div>
+        </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">ID</label>
-                <input
-                  type="text"
-                  value={identifier}
-                  onChange={(event) => setIdentifier(event.target.value)}
-                  className="w-full rounded-2xl border border-[#d8e6ff] bg-[#f9fbff] px-4 py-3 text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white"
-                  placeholder="Enter admin ID"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  className="w-full rounded-2xl border border-[#d8e6ff] bg-[#f9fbff] px-4 py-3 text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white"
-                  placeholder="Enter password"
-                  required
-                />
-              </div>
-
-              {error && <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-teal-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-100 transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isLoading ? "Signing in..." : "Open Admin Workspace"}
-              </button>
-            </form>
-          </div>
-        </section>
-
-        <section className="erp-grid-bg hidden bg-gradient-to-br from-teal-600 via-teal-500 to-blue-500 p-10 text-white lg:flex lg:flex-col lg:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.45em] text-teal-50">Admin Credentials</p>
-            <h1 className="mt-4 text-5xl font-extrabold leading-tight">Question operations stay in one focused panel.</h1>
-            <p className="mt-6 max-w-lg text-base leading-8 text-teal-50">
-              Faculty, admins, and super admins all use the same portal, with CRUD controls layered on top of the
-              Practice Arena experience.
+        {/* Right Side: Info Panel */}
+        <div className="hidden lg:flex flex-col justify-between p-16 bg-gradient-to-br from-blue-50/80 via-white/40 to-teal-50/80 relative order-1 lg:order-2">
+          <div className="absolute inset-0 erp-grid-bg opacity-20" />
+          
+          <div className="relative z-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 border border-blue-200 rounded-full text-[10px] font-black text-blue-600 uppercase tracking-widest mb-8">
+              <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse" />
+              Secure Admin Channel
+            </div>
+            <h1 className="text-5xl font-black text-slate-900 leading-tight tracking-tight">
+              Manage the <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-400">Future of Learning.</span>
+            </h1>
+            <p className="mt-8 text-lg text-slate-600 leading-relaxed max-w-sm font-medium">
+              Unified control center for faculty and administrators to curate content, track analytics, and optimize the academic experience.
             </p>
           </div>
 
-          <div className="space-y-4">
-            {roles.map((role) => (
-              <div key={role.value} className="rounded-3xl border border-white/20 bg-white/15 p-5 backdrop-blur">
-                <p className="text-sm font-bold">{role.label}</p>
-                <p className="mt-2 text-sm text-teal-50">ID: {role.id}</p>
-                <p className="mt-1 text-sm text-teal-50">Password: {role.password}</p>
-              </div>
-            ))}
+          <div className="relative z-10 space-y-4">
+             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-2">Available Nodes</p>
+             <div className="grid gap-3">
+                {roles.map((r, i) => (
+                  <motion.div 
+                    key={r.value}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 + i * 0.1 }}
+                    className="flex items-center justify-between p-4 rounded-2xl bg-white/60 border border-blue-100 hover:bg-white/90 hover:shadow-md transition-all cursor-default group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
+                        {r.label[0]}
+                      </div>
+                      <span className="text-sm font-bold text-slate-700">{r.label}</span>
+                    </div>
+                    <div className="text-[10px] font-black text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest">Authorized</div>
+                  </motion.div>
+                ))}
+             </div>
           </div>
-        </section>
-      </div>
+        </div>
+      </motion.div>
     </div>
   );
 };

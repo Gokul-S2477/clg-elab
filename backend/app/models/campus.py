@@ -8,7 +8,11 @@ class Announcement(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
     content = Column(Text, nullable=False)
-    target_role = Column(String(50), default="all") # all, student, faculty
+    target_role = Column(String(50), default="all") # Legacy field, will keep for compatibility
+    target_roles = Column(String(255), nullable=True) # comma separated: admin,faculty,student
+    target_depts = Column(String(255), nullable=True) # comma separated IDs
+    target_classes = Column(String(255), nullable=True) # comma separated IDs
+    target_users = Column(Text, nullable=True) # comma separated IDs
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)

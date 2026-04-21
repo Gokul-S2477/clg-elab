@@ -6,42 +6,29 @@ import { fetchAppShellSettingsFromApi, getAppShellSettings, saveAppShellSettings
 import { fetchPlaygroundSettingsFromApi, getPlaygroundSettings, savePlaygroundSettings, savePlaygroundSettingsToApi } from "../utils/playgroundSettings";
 import { fetchProctorSettingsFromApi, getProctorSettings, saveProctorSettings, saveProctorSettingsToApi } from "../utils/proctorSettings";
 import { fetchResumeSettingsFromApi, getResumeSettings, saveResumeSettings, saveResumeSettingsToApi } from "../utils/resumeSettings";
+import { fetchThemeSettingsFromApi, getThemeSettings, saveThemeSettings, saveThemeSettingsToApi, THEMES, applyTheme } from "../utils/themeSettings";
 import { getStoredUser, isPrivilegedRole } from "../utils/roleHelper";
-
-const settingCards = [
-  { key: "copyPasteLocked", title: "Disable student copy / paste", description: "Blocks copy, cut, paste, paste special, context menu, and common clipboard shortcuts inside Practice Arena for students." },
-  { key: "extensionGuardEnabled", title: "Enable browser guard", description: "Shows a guarded overlay when students switch tabs or lose focus." },
-  { key: "blurOnFocusLoss", title: "Blur on tab switch", description: "Locks the workspace when the tab loses focus or becomes hidden." },
-  { key: "requireFullscreen", title: "Require fullscreen mode", description: "Prompts students to stay in fullscreen before continuing the workspace." },
-  { key: "examCameraRequired", title: "Require camera permission", description: "Students must grant webcam access before they can start a proctored exam attempt." },
-  { key: "examMicrophoneRequired", title: "Require microphone permission", description: "Students must grant microphone access before they can start a proctored exam attempt." },
-  { key: "blockQuestionSelection", title: "Block student text selection", description: "Prevents question text selection for students while the proctor lock is active." },
-  { key: "disableStudentNotes", title: "Disable notes for students", description: "Hides the private notes panel from students while still allowing admins to use it." },
-  { key: "watermarkEnabled", title: "Show learner watermark", description: "Displays a soft identity watermark over the workspace so screenshots are traceable." },
-];
-
-const appShellCards = [
-  { key: "commandPaletteEnabled", title: "Enable command search", description: "Keeps the top app search and quick-jump palette available across the shell." },
-  { key: "activityFeedEnabled", title: "Enable activity feed", description: "Shows recent app notifications and save activity in the top navigation and dashboard." },
-  { key: "announcementBannerEnabled", title: "Enable announcement banner", description: "Displays the top announcement strip from Content Studio across the app shell." },
-  { key: "dashboardInsightsEnabled", title: "Enable dashboard insights", description: "Shows analytics and progress summaries on the main dashboard." },
-];
+import { Palette, Shield, Terminal, Layout, Book, User, Lock, Check } from "lucide-react";
 
 const SystemSettings = () => {
   const [user] = useState(getStoredUser());
-  const [settings, setSettings] = useState(() => getProctorSettings());
+  const [proctorSettings, setProctorSettings] = useState(() => getProctorSettings());
   const [playgroundSettings, setPlaygroundSettings] = useState(() => getPlaygroundSettings());
   const [resumeSettings, setResumeSettings] = useState(() => getResumeSettings());
   const [appShellSettings, setAppShellSettings] = useState(() => getAppShellSettings());
+  const [themeSettings, setThemeSettings] = useState(() => getThemeSettings());
   const [saveMessage, setSaveMessage] = useState("");
   const [lastSavedAt, setLastSavedAt] = useState(null);
+
+  const isAdmin = user?.role === "admin";
+  const isSuperAdmin = user?.role === "super_admin";
+  const isFaculty = user?.role === "faculty";
 
   useEffect(() => {
     if (!saveMessage) return undefined;
     const timeout = window.setTimeout(() => setSaveMessage(""), 2200);
     return () => window.clearTimeout(timeout);
   }, [saveMessage]);
-
 
   useEffect(() => {
     let mounted = true;
@@ -50,19 +37,24 @@ const SystemSettings = () => {
       fetchPlaygroundSettingsFromApi(),
       fetchResumeSettingsFromApi(),
       fetchAppShellSettingsFromApi(),
-    ]).then(([proctorResult, playgroundResult, resumeResult, shellResult]) => {
+      fetchThemeSettingsFromApi(),
+    ]).then(([proctorRes, playgroundRes, resumeRes, shellRes, themeRes]) => {
       if (!mounted) return;
-      if (proctorResult.status === "fulfilled") setSettings(saveProctorSettings(proctorResult.value));
-      if (playgroundResult.status === "fulfilled") setPlaygroundSettings(savePlaygroundSettings(playgroundResult.value));
-      if (resumeResult.status === "fulfilled") setResumeSettings(saveResumeSettings(resumeResult.value));
-      if (shellResult.status === "fulfilled") setAppShellSettings(saveAppShellSettings(shellResult.value));
+      if (proctorRes.status === "fulfilled") setProctorSettings(saveProctorSettings(proctorRes.value));
+      if (playgroundRes.status === "fulfilled") setPlaygroundSettings(savePlaygroundSettings(playgroundRes.value));
+      if (resumeRes.status === "fulfilled") setResumeSettings(saveResumeSettings(resumeRes.value));
+      if (shellRes.status === "fulfilled") setAppShellSettings(saveAppShellSettings(shellRes.value));
+      if (themeRes.status === "fulfilled") {
+        const remoteTheme = themeRes.value;
+        setThemeSettings(remoteTheme);
+        if (remoteTheme.themeFreeze) {
+          applyTheme(remoteTheme.themeId);
+          saveThemeSettings(remoteTheme);
+        }
+      }
     });
     return () => { mounted = false; };
   }, []);
-
-  if (!isPrivilegedRole(user?.role)) {
-    return <Navigate to="/practice" replace />;
-  }
 
   const announceSave = (title, message) => {
     setSaveMessage(title);
@@ -70,171 +62,214 @@ const SystemSettings = () => {
     pushAppNotification({ title, message, tone: "success", href: "/settings" });
   };
 
-  const handleToggle = (key) => {
-    const next = saveProctorSettings({ ...settings, [key]: !settings[key] });
-    setSettings(next);
-    saveProctorSettingsToApi(next).catch(() => {});
-    announceSave("Proctor settings updated", "Student protection rules were updated across the workspace.");
+  const handleToggle = (setter, getter, saver, key, title, msg) => {
+    const next = saver({ ...getter, [key]: !getter[key] });
+    setter(next);
+    if (saver === saveProctorSettings) saveProctorSettingsToApi(next);
+    if (saver === savePlaygroundSettings) savePlaygroundSettingsToApi(next);
+    if (saver === saveResumeSettings) saveResumeSettingsToApi(next);
+    if (saver === saveAppShellSettings) saveAppShellSettingsToApi(next);
+    if (saver === saveThemeSettings) saveThemeSettingsToApi(next);
+    announceSave(title, msg);
   };
 
-  const handlePlaygroundToggle = (key) => {
-    const next = savePlaygroundSettings({ ...playgroundSettings, [key]: !playgroundSettings[key] });
-    setPlaygroundSettings(next);
-    savePlaygroundSettingsToApi(next).catch(() => {});
-    announceSave("Playground settings updated", "Playground visibility or behavior changed successfully.");
-  };
-
-  const handlePlaygroundNumber = (key, value, min, max) => {
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed)) return;
-    const nextValue = Math.min(max, Math.max(min, parsed));
-    const next = savePlaygroundSettings({ ...playgroundSettings, [key]: nextValue });
-    setPlaygroundSettings(next);
-    savePlaygroundSettingsToApi(next).catch(() => {});
-    announceSave("Playground settings updated", "Numeric playground limits were saved.");
-  };
-
-  const handleResumeToggle = (key) => {
-    const next = saveResumeSettings({ ...resumeSettings, [key]: !resumeSettings[key] });
-    setResumeSettings(next);
-    saveResumeSettingsToApi(next).catch(() => {});
-    announceSave("Resume settings updated", "Resume and profile permissions were updated.");
-  };
-
-  const handleAppShellToggle = (key) => {
-    const next = saveAppShellSettings({ ...appShellSettings, [key]: !appShellSettings[key] });
-    setAppShellSettings(next);
-    saveAppShellSettingsToApi(next).catch(() => {});
-    announceSave("App shell settings updated", "Whole-app shell behavior was updated.");
+  const handleThemeSelect = (themeId) => {
+    if (themeSettings.themeFreeze && !isSuperAdmin) {
+      announceSave("Theme Frozen", "System theme is currently locked by administrator.");
+      return;
+    }
+    const next = saveThemeSettings({ ...themeSettings, themeId });
+    setThemeSettings(next);
+    saveThemeSettingsToApi(next);
+    announceSave("Theme updated", `Applied ${THEMES.find(t => t.id === themeId)?.name} theme.`);
   };
 
   return (
-    <div className="space-y-6">
-      <section className="erp-card rounded-[30px] p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.4em] text-blue-600">Main Settings</p>
-            <h1 className="mt-3 text-3xl font-extrabold text-slate-900">System Controls</h1>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">Manage protection rules, shell behavior, study access, playground defaults, and resume/profile permissions from one privileged panel.</p>
-            {saveMessage && <p className="mt-4 text-sm font-semibold text-blue-600">{saveMessage}</p>}
+    <div className="space-y-8 pb-20">
+      <section className="erp-card rounded-[32px] p-8 erp-grid-bg border-none shadow-xl">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-600">Preferences</p>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tight">Personal & System Settings</h1>
+            <p className="text-slate-600 font-medium">Manage your workspace experience and system-wide controls.</p>
           </div>
-          <SaveStatusBadge value={lastSavedAt} tone="success" />
+          <div className="flex items-center gap-4">
+            {saveMessage && <span className="text-sm font-bold text-blue-600 animate-pulse">{saveMessage}</span>}
+            <SaveStatusBadge value={lastSavedAt} />
+          </div>
         </div>
       </section>
 
-      <section className="erp-card rounded-[30px] p-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.4em] text-blue-600">App Experience</p>
-        <h2 className="mt-3 text-2xl font-extrabold text-slate-900">Whole-app shell controls</h2>
-        <div className="mt-5 grid gap-4 xl:grid-cols-2">
-          {appShellCards.map((item) => (
-            <div key={item.key} className="rounded-[28px] border border-blue-100 bg-blue-50/50 p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-lg font-bold text-slate-900">{item.title}</p>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">{item.description}</p>
+      <section className="erp-card rounded-[32px] p-8 border-none shadow-xl">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+            <Palette size={20} />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Visual Identity</h2>
+            <p className="text-sm text-slate-500 font-medium">Choose a color palette that suits your workflow.</p>
+          </div>
+        </div>
+
+        {themeSettings.themeFreeze && !isSuperAdmin && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-100 rounded-2xl flex items-center gap-3 text-amber-700">
+            <Lock size={18} />
+            <span className="text-sm font-bold">Theme changes are currently restricted by Super Admin.</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {THEMES.map((theme) => (
+            <button
+              key={theme.id}
+              onClick={() => handleThemeSelect(theme.id)}
+              disabled={themeSettings.themeFreeze && !isSuperAdmin}
+              className={`relative p-6 rounded-[24px] border-2 transition-all flex flex-col items-center gap-4 group ${
+                themeSettings.themeId === theme.id 
+                  ? "border-blue-600 bg-blue-50/30" 
+                  : "border-slate-100 bg-slate-50/50 hover:border-blue-200"
+              } ${(themeSettings.themeFreeze && !isSuperAdmin) ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              <div className={`w-12 h-12 rounded-full shadow-lg transition-transform group-hover:scale-110 ${theme.id === 'default' ? 'bg-blue-600' : 
+                theme.id === 'purple' ? 'bg-purple-600' :
+                theme.id === 'green' ? 'bg-emerald-600' :
+                theme.id === 'rose' ? 'bg-rose-600' : 'bg-amber-600'}`} />
+              <span className="text-sm font-bold text-slate-900">{theme.name}</span>
+              {themeSettings.themeId === theme.id && (
+                <div className="absolute top-3 right-3 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white">
+                  <Check size={14} />
                 </div>
-                <button type="button" onClick={() => handleAppShellToggle(item.key)} className={`rounded-full px-4 py-2 text-sm font-bold ${appShellSettings[item.key] ? "border border-blue-200 bg-white text-blue-700" : "border border-slate-200 bg-white text-slate-600"}`}>
-                  {appShellSettings[item.key] ? "Enabled" : "Disabled"}
-                </button>
-              </div>
-            </div>
+              )}
+            </button>
           ))}
         </div>
-      </section>
 
-      <section className="grid gap-4 xl:grid-cols-2">
-        {settingCards.map((item) => (
-          <div key={item.key} className="erp-card rounded-[28px] p-5">
-            <div className="flex items-start justify-between gap-4">
+        {isSuperAdmin && (
+          <div className="mt-8 pt-8 border-t border-slate-100">
+            <div className="flex items-center justify-between p-6 bg-slate-900 rounded-[24px] text-white">
               <div>
-                <p className="text-lg font-bold text-slate-900">{item.title}</p>
-                <p className="mt-2 text-sm leading-7 text-slate-600">{item.description}</p>
+                <h3 className="font-bold text-lg">Global Theme Lock</h3>
+                <p className="text-slate-400 text-sm">Force the selected theme for all users and disable personal changes.</p>
               </div>
-              <button type="button" onClick={() => handleToggle(item.key)} className={`rounded-full px-4 py-2 text-sm font-bold ${settings[item.key] ? "border border-blue-200 bg-blue-50 text-blue-700" : "border border-slate-200 bg-white text-slate-600"}`}>
-                {settings[item.key] ? "Enabled" : "Disabled"}
+              <button 
+                onClick={() => handleToggle(setThemeSettings, themeSettings, saveThemeSettings, "themeFreeze", "Global Lock Updated", "Theme restriction has been applied system-wide.")}
+                className={`px-6 py-3 rounded-xl font-bold transition-all ${themeSettings.themeFreeze ? "bg-red-500 hover:bg-red-600" : "bg-blue-600 hover:bg-blue-700"}`}
+              >
+                {themeSettings.themeFreeze ? "Unlock Themes" : "Freeze System Theme"}
               </button>
             </div>
           </div>
-        ))}
+        )}
       </section>
 
-      <section className="erp-card rounded-[28px] border border-amber-100 bg-amber-50/70 p-5">
-        <p className="text-sm font-bold text-amber-800">Important note</p>
-        <p className="mt-2 text-sm leading-7 text-amber-700">A normal web app cannot truly disable installed browser extensions at the browser level. What we can do reliably is harden the page with copy/paste blocking, focus-loss guards, fullscreen checks, and protected overlays so the student workflow is much more controlled.</p>
-      </section>
-
-      <section className="erp-card rounded-[30px] p-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.4em] text-blue-600">Study Settings</p>
-        <h2 className="mt-3 text-2xl font-extrabold text-slate-900">Study Module Controls</h2>
-        <div className="mt-5 grid gap-4 xl:grid-cols-2">
-          <div className="erp-soft-card rounded-[28px] p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-lg font-bold text-slate-900">Enable Study lock mode</p>
-                <p className="mt-2 text-sm leading-7 text-slate-600">When enabled, students unlock SQL study topics sequentially. Turn it off if you want learners to jump freely between lessons from the sidebar.</p>
-              </div>
-              <button type="button" onClick={() => handlePlaygroundToggle("studyLockMode")} className={`rounded-full px-4 py-2 text-sm font-bold ${playgroundSettings.studyLockMode ? "border border-blue-200 bg-blue-50 text-blue-700" : "border border-slate-200 bg-white text-slate-600"}`}>{playgroundSettings.studyLockMode ? "Enabled" : "Disabled"}</button>
+      {(isAdmin || isSuperAdmin) && (
+        <section className="erp-card rounded-[32px] p-8 border-none shadow-xl">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-red-600">
+              <Shield size={20} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">System Integrity</h2>
+              <p className="text-sm text-slate-500 font-medium">Configure security and proctoring rules.</p>
             </div>
           </div>
-          <div className="erp-card rounded-[28px] border border-blue-100 bg-blue-50/70 p-5">
-            <p className="text-sm font-bold text-blue-900">Current behavior</p>
-            <p className="mt-2 text-sm leading-7 text-blue-800">{playgroundSettings.studyLockMode ? "Students can only open the next unlocked topic after completing the current one." : "All study topics are open, so students can enter any topic directly."}</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="erp-card rounded-[30px] p-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.4em] text-blue-600">Playground Settings</p>
-        <h2 className="mt-3 text-2xl font-extrabold text-slate-900">Playground Controls</h2>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-2">
-        {[
-          { key: "compilerEnabled", title: "Enable Compiler Lab", description: "Show or hide Compiler Lab for users." },
-          { key: "appEnabled", title: "Enable App Playground", description: "Show or hide Streamlit app playground." },
-          { key: "sqlEnabled", title: "Enable SQL Playground", description: "Show or hide SQL dataset playground." },
-          { key: "notebookEnabled", title: "Enable Notebook Lab", description: "Show or hide notebook-style coding lab." },
-          { key: "showSchemaDiagrams", title: "Show schema diagrams", description: "Display ER-like schema diagrams for supported SQL datasets." },
-          { key: "enableSqlHistory", title: "Enable SQL query history", description: "Keep local per-user SQL query history in browser storage." },
-          { key: "compactSqlSidebar", title: "Compact SQL sidebar", description: "Use tighter spacing in SQL schema panel." },
-          { key: "sqlTableDenseMode", title: "Dense SQL result table", description: "Use tighter row density for SQL result grids." },
-          { key: "autoRunLastSqlOnDatasetChange", title: "Auto-run on dataset change", description: "Run latest SQL query automatically after changing dataset." },
-          { key: "keepNotebookOutputsOnLanguageSwitch", title: "Keep notebook outputs on language switch", description: "Retain notebook outputs instead of clearing when language changes." },
-        ].map((item) => (
-          <div key={item.key} className="erp-card rounded-[28px] p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-lg font-bold text-slate-900">{item.title}</p>
-                <p className="mt-2 text-sm leading-7 text-slate-600">{item.description}</p>
+          <div className="grid gap-4 md:grid-cols-2">
+            {[
+              { key: "copyPasteLocked", title: "Block Clipboard Access", desc: "Disable copy/paste in practice areas." },
+              { key: "extensionGuardEnabled", title: "Browser Guard", desc: "Monitor tab switching and focus loss." },
+              { key: "requireFullscreen", title: "Enforce Fullscreen", desc: "Require fullscreen for active sessions." },
+              { key: "watermarkEnabled", title: "Learner Watermark", desc: "Display traceability overlay." },
+            ].map(item => (
+              <div key={item.key} className="p-6 rounded-[24px] bg-slate-50/50 border border-slate-100 flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-slate-900">{item.title}</p>
+                  <p className="text-xs text-slate-500 mt-1">{item.desc}</p>
+                </div>
+                <button 
+                  onClick={() => handleToggle(setProctorSettings, proctorSettings, saveProctorSettings, item.key, "Security Updated", "Integrity rules have been synchronized.")}
+                  className={`w-12 h-6 rounded-full transition-all relative ${proctorSettings[item.key] ? "bg-blue-600" : "bg-slate-300"}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${proctorSettings[item.key] ? "left-7" : "left-1"}`} />
+                </button>
               </div>
-              <button type="button" onClick={() => handlePlaygroundToggle(item.key)} className={`rounded-full px-4 py-2 text-sm font-bold ${playgroundSettings[item.key] ? "border border-blue-200 bg-blue-50 text-blue-700" : "border border-slate-200 bg-white text-slate-600"}`}>{playgroundSettings[item.key] ? "Enabled" : "Disabled"}</button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {(isFaculty || isSuperAdmin || isAdmin) && (
+        <section className="erp-card rounded-[32px] p-8 border-none shadow-xl">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
+              <Book size={20} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Curriculum Controls</h2>
+              <p className="text-sm text-slate-500 font-medium">Manage how students interact with learning modules.</p>
             </div>
           </div>
-        ))}
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-3">
-        <div className="erp-card rounded-[24px] p-5"><p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">SQL Page Size</p><input type="number" min={50} max={500} value={playgroundSettings.sqlPageSize} onChange={(e) => handlePlaygroundNumber("sqlPageSize", e.target.value, 50, 500)} className="mt-3 w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm font-semibold text-slate-700 outline-none" /></div>
-        <div className="erp-card rounded-[24px] p-5"><p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Max Notebook Cells</p><input type="number" min={5} max={100} value={playgroundSettings.maxNotebookCells} onChange={(e) => handlePlaygroundNumber("maxNotebookCells", e.target.value, 5, 100)} className="mt-3 w-full rounded-2xl border border-blue-100 bg-[#f8fbff] px-4 py-3 text-sm font-semibold text-slate-700 outline-none" /></div>
-        <div className="erp-card rounded-[24px] border border-blue-100 bg-blue-50/70 p-5"><p className="text-sm font-bold text-blue-900">Advanced Note</p><p className="mt-2 text-sm leading-7 text-blue-800">These settings are applied immediately in Playground via browser storage and can be tuned without code changes.</p></div>
-      </section>
-
-      <section className="erp-card rounded-[30px] p-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.4em] text-blue-600">Resume Settings</p>
-        <h2 className="mt-3 text-2xl font-extrabold text-slate-900">Resume Builder Controls</h2>
-        <div className="mt-5 grid gap-4 xl:grid-cols-2">
-          <div className="erp-card rounded-[28px] p-5">
-            <div className="flex items-start justify-between gap-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="p-6 rounded-[24px] bg-slate-50/50 border border-slate-100 flex items-center justify-between">
               <div>
-                <p className="text-lg font-bold text-slate-900">Allow students to edit profile basics</p>
-                <p className="mt-2 text-sm leading-7 text-slate-600">When disabled, students can still use their stored profile data in Resume Builder, but only privileged roles can change it.</p>
+                <p className="font-bold text-slate-900">Study Lock Mode</p>
+                <p className="text-xs text-slate-500 mt-1">Force sequential lesson completion.</p>
               </div>
-              <button type="button" onClick={() => handleResumeToggle("studentProfileEditEnabled")} className={`rounded-full px-4 py-2 text-sm font-bold ${resumeSettings.studentProfileEditEnabled ? "border border-blue-200 bg-blue-50 text-blue-700" : "border border-slate-200 bg-white text-slate-600"}`}>{resumeSettings.studentProfileEditEnabled ? "Enabled" : "Disabled"}</button>
+              <button 
+                onClick={() => handleToggle(setPlaygroundSettings, playgroundSettings, savePlaygroundSettings, "studyLockMode", "Study Mode Updated", "Curriculum flow has been updated.")}
+                className={`w-12 h-6 rounded-full transition-all relative ${playgroundSettings.studyLockMode ? "bg-emerald-600" : "bg-slate-300"}`}
+              >
+                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${playgroundSettings.studyLockMode ? "left-7" : "left-1"}`} />
+              </button>
+            </div>
+            <div className="p-6 rounded-[24px] bg-slate-50/50 border border-slate-100 flex items-center justify-between">
+              <div>
+                <p className="font-bold text-slate-900">AI Compiler Access</p>
+                <p className="text-xs text-slate-500 mt-1">Enable AI-assisted coding playground.</p>
+              </div>
+              <button 
+                onClick={() => handleToggle(setPlaygroundSettings, playgroundSettings, savePlaygroundSettings, "compilerEnabled", "Tooling Updated", "Lab environment settings saved.")}
+                className={`w-12 h-6 rounded-full transition-all relative ${playgroundSettings.compilerEnabled ? "bg-emerald-600" : "bg-slate-300"}`}
+              >
+                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${playgroundSettings.compilerEnabled ? "left-7" : "left-1"}`} />
+              </button>
             </div>
           </div>
-          <div className="erp-card rounded-[28px] border border-blue-100 bg-blue-50/70 p-5"><p className="text-sm font-bold text-blue-900">Current behavior</p><p className="mt-2 text-sm leading-7 text-blue-800">{resumeSettings.studentProfileEditEnabled ? "Students can update their reusable profile from the Profile Center and Resume Builder." : "Students see profile basics in read-only mode. Faculty and admins still keep edit access."}</p></div>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {(isAdmin || isSuperAdmin) && (
+        <section className="erp-card rounded-[32px] p-8 border-none shadow-xl">
+           <div className="flex items-center gap-3 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600">
+              <Layout size={20} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Interface Controls</h2>
+              <p className="text-sm text-slate-500 font-medium">Enable or disable core shell features.</p>
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {[
+              { key: "commandPaletteEnabled", title: "Universal Search", desc: "Quick-jump command palette access." },
+              { key: "activityFeedEnabled", title: "Live Activity Feed", desc: "Real-time updates in top navigation." },
+              { key: "dashboardInsightsEnabled", title: "Dashboard Analytics", desc: "Show performance charts on home." },
+            ].map(item => (
+              <div key={item.key} className="p-6 rounded-[24px] bg-slate-50/50 border border-slate-100 flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-slate-900">{item.title}</p>
+                  <p className="text-xs text-slate-500 mt-1">{item.desc}</p>
+                </div>
+                <button 
+                  onClick={() => handleToggle(setAppShellSettings, appShellSettings, saveAppShellSettings, item.key, "UI Updated", "Interface settings synchronized.")}
+                  className={`w-12 h-6 rounded-full transition-all relative ${appShellSettings[item.key] ? "bg-indigo-600" : "bg-slate-300"}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${appShellSettings[item.key] ? "left-7" : "left-1"}`} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 };
